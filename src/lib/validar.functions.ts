@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { logAnthropicUsage } from "./uso-ia.server";
 
 const Input = z.object({
   texto: z.string().min(1),
@@ -91,6 +92,13 @@ export const validarPeca = createServerFn({ method: "POST" })
 
     const json = await res.json();
     const content: string = json?.content?.[0]?.text ?? "";
+    await logAnthropicUsage({
+      modulo: "validar",
+      operacao: "validar_peca",
+      tokens_input: json?.usage?.input_tokens ?? 0,
+      tokens_output: json?.usage?.output_tokens ?? 0,
+      detalhes: { tamanho_texto: data.texto.length },
+    });
     let parsed: ValidarOutput;
     try {
       parsed = JSON.parse(content);
