@@ -23,7 +23,6 @@ function Dashboard() {
   const now = new Date();
   const mes = now.getMonth() + 1;
   const ano = now.getFullYear();
-  const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
   const { data: metrics } = useQuery({
     queryKey: ["dashboard-metrics", mes, ano],
@@ -46,28 +45,6 @@ function Dashboard() {
         publicados: publicados?.length ?? 0,
         linhaTop,
         dorTop: dores?.[0]?.titulo ?? "—",
-      };
-    },
-  });
-
-  const { data: custos } = useQuery({
-    queryKey: ["uso-ia-mes", inicioMes],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("uso_ia")
-        .select("modulo, custo_brl")
-        .gte("created_at", inicioMes);
-      if (error) throw error;
-      const rows = (data ?? []) as { modulo: string; custo_brl: number }[];
-      const total = rows.reduce((s, r) => s + Number(r.custo_brl ?? 0), 0);
-      const porModulo = (m: string) => rows.filter((r) => r.modulo === m);
-      return {
-        total,
-        operacoes: rows.length,
-        copy: porModulo("copy").length,
-        concorrentes: porModulo("concorrentes").length,
-        validar: porModulo("validar").length,
-        media: rows.length > 0 ? total / rows.length : 0,
       };
     },
   });
