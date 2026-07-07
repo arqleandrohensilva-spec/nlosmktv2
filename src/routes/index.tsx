@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
+import { CustoIaCard, CustoIaAlertas } from "@/components/custo-ia-card";
 import {
   Sparkles,
   Calendar,
@@ -87,28 +88,18 @@ function Dashboard() {
           <MetricCard label="Dor mais atacada" value={metrics?.dorTop ?? "—"} small />
         </section>
 
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)]">
-              CUSTO IA — MÊS ATUAL
-            </div>
+        <div className="space-y-4">
+          <CustoIaCard />
+          <CustoIaAlertas />
+          <div className="flex justify-end">
             <Link
               to="/custos"
               className="inline-flex items-center gap-1 text-xs text-[color:var(--bronze)] hover:underline"
             >
-              Detalhes <ArrowUpRight className="h-3 w-3" />
+              Ver detalhes <ArrowUpRight className="h-3 w-3" />
             </Link>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-            <MetricCard label="Total gasto" value={formatBRL(custos?.total ?? 0)} />
-            <MetricCard label="Gerações de copy" value={`${custos?.copy ?? 0} operações`} small />
-            <MetricCard label="Análises concorrentes" value={`${custos?.concorrentes ?? 0} análises`} small />
-            <MetricCard label="Validações" value={`${custos?.validar ?? 0} validações`} small />
-          </div>
-          <div className="text-sm text-[color:var(--muted-foreground)] mt-3">
-            Média por operação: {formatBRL(custos?.media ?? 0)}
-          </div>
-        </section>
+        </div>
 
         <section className="border border-[color:var(--divisoria)] bg-[color:var(--bege)] p-6 md:p-8 rounded-lg">
           <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)] mb-3">
