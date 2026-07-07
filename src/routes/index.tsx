@@ -49,6 +49,18 @@ function Dashboard() {
     },
   });
 
+  const { data: pilaresPosts } = useQuery({
+    queryKey: ["dashboard-pilares-30d"],
+    queryFn: async () => {
+      const desde = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const { data } = await supabase
+        .from("posts")
+        .select("pilar, created_at")
+        .gte("created_at", desde);
+      return data ?? [];
+    },
+  });
+
   return (
     <>
       <PageHeader
@@ -64,6 +76,8 @@ function Dashboard() {
           <MetricCard label="Linha mais ativa" value={metrics?.linhaTop ?? "—"} />
           <MetricCard label="Dor mais atacada" value={metrics?.dorTop ?? "—"} small />
         </section>
+
+        <BalanceadorPilares posts={pilaresPosts ?? []} />
 
         <div className="space-y-4">
           <CustoIaCard />
@@ -159,6 +173,126 @@ function MetricCard({ label, value, small }: { label: string; value: string | nu
 
 
 function Shortcut({
+  to,
+  icon: Icon,
+  title,
+  desc,
+}: {
+  to: string;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  title: string;
+  desc: string;
+}) {
+  return ShortcutImpl({ to, icon: Icon, title, desc });
+}
+
+const PILARES = ["Posicionamento", "Oferta", "Marketing", "Vendas"] as const;
+type Pilar = (typeof PILARES)[number];
+
+function BalanceadorPilares({ posts }: { posts: { pilar: string | null; created_at: string }[] }) {
+  const total = posts.length;
+  const counts: Record<Pilar, number> = { Posicionamento: 0, Oferta: 0, Marketing: 0, Vendas: 0 };
+  const ultimaData: Record<Pilar, string | null> = { Posicionamento: null, Oferta: null, Marketing: null, Vendas: null };
+  posts.forEach((p) => {
+    const pil = (p.pilar ?? "") as Pilar;
+    if ((PILARES as readonly string[]).includes(pil)) {
+      counts[pil] += 1;
+      if (!ultimaData[pil] || p.created_at > ultimaData[pil]!) ultimaData[pil] = p.created_at;
+    }
+  });
+
+  const label = (
+    <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)] mb-4">
+      BALANCEADOR DE PILARES — 30 DIAS
+    </div>
+  );
+
+  if (total < 4) {
+    return (
+      <section>
+        {label}
+        <div className="border border-[color:var(--divisoria)] rounded-lg bg-white p-6 text-sm text-[color:var(--muted-foreground)]">
+          Ainda sem dados suficientes. Gere pelo menos 4 posts para ver o balanço.
+        </div>
+      </section>
+    );
+  }
+
+  const diasDesde = (iso: string | null) => {
+    if (!iso) return 30;
+    return Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / (24 * 60 * 60 * 1000)));
+  };
+
+  const alertas: { tipo: "ausente" | "dominante"; texto: string }[] = [];
+  PILARES.forEach((pil) => {
+    const c = counts[pil];
+    const pct = (c / total) * 100;
+    if (c === 0) {
+      alertas.push({
+        tipo: "ausente",
+        texto: `${pil} ausente há 30 dias. Seu próximo post deveria reequilibrar.`,
+      });
+    } else if (pct > 50) {
+      const semPos = counts.Posicionamento === 0;
+      if (semPos && pil !== "Posicionamento") {
+        alertas.push({
+          tipo: "dominante",
+          texto: `Você está ${Math.round(pct)}% em ${pil}. Sem Posicionamento há ${diasDesde(ultimaData.Posicionamento)} dias, a audiência percebe pressão antes de confiar.`,
+        });
+      } else {
+        alertas.push({
+          tipo: "dominante",
+          texto: `Você está ${Math.round(pct)}% em ${pil}. Reequilibre com outros pilares para não saturar a audiência.`,
+        });
+      }
+    }
+  });
+
+  return (
+    <section>
+      {label}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {PILARES.map((pil) => {
+          const c = counts[pil];
+          const pct = (c / total) * 100;
+          const saudavel = pct >= 15 && pct <= 40;
+          const cor = saudavel ? "var(--bronze)" : pct < 10 ? "#B23A3A" : "#C99B4A";
+          return (
+            <div key={pil} className="border border-[color:var(--divisoria)] rounded-lg bg-white p-4">
+              <div className="flex items-baseline justify-between">
+                <div className="font-serif text-base text-[color:var(--graphite)]">{pil}</div>
+                <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)]">
+                  {c} POST{c === 1 ? "" : "S"} · {Math.round(pct)}%
+                </div>
+              </div>
+              <div className="mt-3 h-1.5 w-full bg-[color:var(--bege)] rounded">
+                <div className="h-1.5 rounded transition-all" style={{ width: `${Math.min(100, pct)}%`, backgroundColor: cor }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {alertas.length > 0 && (
+        <div className="mt-3 space-y-2">
+          {alertas.map((a, i) => (
+            <div
+              key={i}
+              className={`border rounded-lg p-4 text-sm ${
+                a.tipo === "ausente"
+                  ? "border-[color:var(--bronze)] bg-[color:var(--bege)] text-[color:var(--graphite)]"
+                  : "border-[#C99B4A] bg-[#FBF3E4] text-[color:var(--graphite)]"
+              }`}
+            >
+              {a.texto}
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ShortcutImpl({
   to,
   icon: Icon,
   title,
