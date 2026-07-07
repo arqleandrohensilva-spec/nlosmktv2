@@ -49,6 +49,18 @@ function Dashboard() {
     },
   });
 
+  const { data: pilaresPosts } = useQuery({
+    queryKey: ["dashboard-pilares-30d"],
+    queryFn: async () => {
+      const desde = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const { data } = await supabase
+        .from("posts")
+        .select("pilar, created_at")
+        .gte("created_at", desde);
+      return data ?? [];
+    },
+  });
+
   return (
     <>
       <PageHeader
@@ -64,6 +76,8 @@ function Dashboard() {
           <MetricCard label="Linha mais ativa" value={metrics?.linhaTop ?? "—"} />
           <MetricCard label="Dor mais atacada" value={metrics?.dorTop ?? "—"} small />
         </section>
+
+        <BalanceadorPilares posts={pilaresPosts ?? []} />
 
         <div className="space-y-4">
           <CustoIaCard />
