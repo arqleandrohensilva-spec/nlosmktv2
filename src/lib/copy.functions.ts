@@ -52,7 +52,7 @@ export const gerarCopy = createServerFn({ method: "POST" })
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
-        max_tokens: 1000,
+        max_tokens: 4000,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: userPrompt }],
       }),
@@ -67,23 +67,32 @@ export const gerarCopy = createServerFn({ method: "POST" })
 
     const json = await res.json();
     const content: string = json?.content?.[0]?.text ?? "";
+    const stopReason: string = json?.stop_reason ?? "";
+    if (stopReason === "max_tokens") {
+      throw new Error("A resposta da IA foi cortada por limite de tokens. Tente novamente.");
+    }
     let parsed: CopyOutput;
     try {
       parsed = JSON.parse(content);
     } catch {
-      // Strip markdown code fences the model may add despite instructions.
       const cleaned = content
-        .replace(/^```json\s*/i, "")
-        .replace(/^```\s*/i, "")
-        .replace(/```\s*$/i, "")
+        .replace(/```json\s*/gi, "")
+        .replace(/```\s*/g, "")
         .trim();
+      const start = cleaned.indexOf("{");
+      const end = cleaned.lastIndexOf("}");
+      if (start === -1 || end === -1 || end <= start) {
+        throw new Error("Resposta da IA não estava em JSON válido.");
+      }
+      let candidate = cleaned.slice(start, end + 1);
       try {
-        parsed = JSON.parse(cleaned);
+        parsed = JSON.parse(candidate);
       } catch {
-        // Last resort: extract the first {...} block from the text.
-        const match = cleaned.match(/\{[\s\S]*\}/);
-        if (!match) throw new Error("Resposta da IA não estava em JSON válido.");
-        parsed = JSON.parse(match[0]);
+        candidate = candidate
+          .replace(/,\s*}/g, "}")
+          .replace(/,\s*]/g, "]")
+          .replace(/[\x00-\x1F\x7F]/g, " ");
+        parsed = JSON.parse(candidate);
       }
     }
     return parsed;
