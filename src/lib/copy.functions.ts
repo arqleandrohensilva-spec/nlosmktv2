@@ -38,7 +38,7 @@ export const gerarCopy = createServerFn({ method: "POST" })
       data.observacao ? `Observação do fundador: ${data.observacao}` : "",
       data.ajuste_raciocinio ? `Ajuste solicitado no raciocínio: ${data.ajuste_raciocinio}` : "",
       "",
-      "Gere um post seguindo a régua de marca da NL. Responda APENAS com o JSON no formato especificado.",
+      "Responda EXCLUSIVAMENTE com o objeto JSON. Sem texto antes, sem texto depois, sem markdown, sem blocos de código, sem explicação. Apenas o JSON puro começando com { e terminando com }.",
     ]
       .filter(Boolean)
       .join("\n");
@@ -71,10 +71,20 @@ export const gerarCopy = createServerFn({ method: "POST" })
     try {
       parsed = JSON.parse(content);
     } catch {
-      // Try to extract JSON from a code block or text
-      const match = content.match(/\{[\s\S]*\}/);
-      if (!match) throw new Error("Resposta da IA não estava em JSON válido.");
-      parsed = JSON.parse(match[0]);
+      // Strip markdown code fences the model may add despite instructions.
+      const cleaned = content
+        .replace(/^```json\s*/i, "")
+        .replace(/^```\s*/i, "")
+        .replace(/```\s*$/i, "")
+        .trim();
+      try {
+        parsed = JSON.parse(cleaned);
+      } catch {
+        // Last resort: extract the first {...} block from the text.
+        const match = cleaned.match(/\{[\s\S]*\}/);
+        if (!match) throw new Error("Resposta da IA não estava em JSON válido.");
+        parsed = JSON.parse(match[0]);
+      }
     }
     return parsed;
   });
