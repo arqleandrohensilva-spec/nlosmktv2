@@ -4,6 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { Sparkles, Crosshair, ShieldCheck, Search, DollarSign } from "lucide-react";
+import {
+  CustoIaCard,
+  CustoIaAlertas,
+  AjustarLimiteButton,
+} from "@/components/custo-ia-card";
 
 export const Route = createFileRoute("/custos")({
   component: CustosPage,
@@ -83,17 +88,21 @@ function CustosPage() {
         eyebrow="Custos de IA"
         title="Rastreamento de operações"
         description="Cada chamada de IA, com tokens consumidos e custo real. Ordenado por data decrescente."
+        actions={<AjustarLimiteButton />}
       />
 
       <div className="px-4 md:px-10 py-8 space-y-8">
-        <section className="border border-[color:var(--divisoria)] bg-[color:var(--bege)] rounded-lg p-6 md:p-8">
+        <CustoIaCard />
+        <CustoIaAlertas />
+
+        <section className="border border-[color:var(--divisoria)] bg-white rounded-lg p-5">
           <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)] mb-2 flex items-center gap-2">
-            <DollarSign className="h-3 w-3" /> TOTAL DO MÊS
+            <DollarSign className="h-3 w-3" /> TOTAL DO PERÍODO FILTRADO
           </div>
-          <div className="font-serif text-4xl md:text-5xl text-[color:var(--graphite)]">
+          <div className="font-serif text-2xl text-[color:var(--graphite)]">
             {formatBRL(totalMes)}
           </div>
-          <div className="text-sm text-[color:var(--muted-foreground)] mt-2">
+          <div className="text-sm text-[color:var(--muted-foreground)] mt-1">
             {rows?.length ?? 0} operações no período selecionado.
           </div>
         </section>
