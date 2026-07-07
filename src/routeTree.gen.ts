@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ValidarRouteImport } from './routes/validar'
+import { Route as ReescreverRouteImport } from './routes/reescrever'
 import { Route as RadarRouteImport } from './routes/radar'
 import { Route as PerformanceRouteImport } from './routes/performance'
 import { Route as ObjecoesRouteImport } from './routes/objecoes'
@@ -23,6 +24,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const ValidarRoute = ValidarRouteImport.update({
   id: '/validar',
   path: '/validar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReescreverRoute = ReescreverRouteImport.update({
+  id: '/reescrever',
+  path: '/reescrever',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RadarRoute = RadarRouteImport.update({
@@ -81,6 +87,7 @@ export interface FileRoutesByFullPath {
   '/objecoes': typeof ObjecoesRoute
   '/performance': typeof PerformanceRoute
   '/radar': typeof RadarRoute
+  '/reescrever': typeof ReescreverRoute
   '/validar': typeof ValidarRoute
 }
 export interface FileRoutesByTo {
@@ -93,6 +100,7 @@ export interface FileRoutesByTo {
   '/objecoes': typeof ObjecoesRoute
   '/performance': typeof PerformanceRoute
   '/radar': typeof RadarRoute
+  '/reescrever': typeof ReescreverRoute
   '/validar': typeof ValidarRoute
 }
 export interface FileRoutesById {
@@ -106,6 +114,7 @@ export interface FileRoutesById {
   '/objecoes': typeof ObjecoesRoute
   '/performance': typeof PerformanceRoute
   '/radar': typeof RadarRoute
+  '/reescrever': typeof ReescreverRoute
   '/validar': typeof ValidarRoute
 }
 export interface FileRouteTypes {
@@ -120,6 +129,7 @@ export interface FileRouteTypes {
     | '/objecoes'
     | '/performance'
     | '/radar'
+    | '/reescrever'
     | '/validar'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -132,6 +142,7 @@ export interface FileRouteTypes {
     | '/objecoes'
     | '/performance'
     | '/radar'
+    | '/reescrever'
     | '/validar'
   id:
     | '__root__'
@@ -144,6 +155,7 @@ export interface FileRouteTypes {
     | '/objecoes'
     | '/performance'
     | '/radar'
+    | '/reescrever'
     | '/validar'
   fileRoutesById: FileRoutesById
 }
@@ -157,6 +169,7 @@ export interface RootRouteChildren {
   ObjecoesRoute: typeof ObjecoesRoute
   PerformanceRoute: typeof PerformanceRoute
   RadarRoute: typeof RadarRoute
+  ReescreverRoute: typeof ReescreverRoute
   ValidarRoute: typeof ValidarRoute
 }
 
@@ -167,6 +180,13 @@ declare module '@tanstack/react-router' {
       path: '/validar'
       fullPath: '/validar'
       preLoaderRoute: typeof ValidarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reescrever': {
+      id: '/reescrever'
+      path: '/reescrever'
+      fullPath: '/reescrever'
+      preLoaderRoute: typeof ReescreverRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/radar': {
@@ -245,6 +265,7 @@ const rootRouteChildren: RootRouteChildren = {
   ObjecoesRoute: ObjecoesRoute,
   PerformanceRoute: PerformanceRoute,
   RadarRoute: RadarRoute,
+  ReescreverRoute: ReescreverRoute,
   ValidarRoute: ValidarRoute,
 }
 export const routeTree = rootRouteImport

@@ -15,11 +15,13 @@ import {
   ShieldCheck,
   Crosshair,
   DollarSign,
+  RefreshCw,
 } from "lucide-react";
 
 const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/copy", label: "Motor de Copy IA", icon: Sparkles },
+  { to: "/reescrever", label: "Reescritor", icon: RefreshCw },
   { to: "/calendario", label: "Calendário Editorial", icon: Calendar },
   { to: "/objecoes", label: "Banco de Objeções", icon: Shield },
   { to: "/performance", label: "Performance", icon: BarChart3 },
