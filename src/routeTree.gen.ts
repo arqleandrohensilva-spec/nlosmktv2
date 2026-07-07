@@ -14,6 +14,7 @@ import { Route as RadarRouteImport } from './routes/radar'
 import { Route as PerformanceRouteImport } from './routes/performance'
 import { Route as ObjecoesRouteImport } from './routes/objecoes'
 import { Route as MarcaRouteImport } from './routes/marca'
+import { Route as CustosRouteImport } from './routes/custos'
 import { Route as CopyRouteImport } from './routes/copy'
 import { Route as ConcorrentesRouteImport } from './routes/concorrentes'
 import { Route as CalendarioRouteImport } from './routes/calendario'
@@ -44,6 +45,11 @@ const MarcaRoute = MarcaRouteImport.update({
   path: '/marca',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CustosRoute = CustosRouteImport.update({
+  id: '/custos',
+  path: '/custos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CopyRoute = CopyRouteImport.update({
   id: '/copy',
   path: '/copy',
@@ -70,6 +76,7 @@ export interface FileRoutesByFullPath {
   '/calendario': typeof CalendarioRoute
   '/concorrentes': typeof ConcorrentesRoute
   '/copy': typeof CopyRoute
+  '/custos': typeof CustosRoute
   '/marca': typeof MarcaRoute
   '/objecoes': typeof ObjecoesRoute
   '/performance': typeof PerformanceRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/calendario': typeof CalendarioRoute
   '/concorrentes': typeof ConcorrentesRoute
   '/copy': typeof CopyRoute
+  '/custos': typeof CustosRoute
   '/marca': typeof MarcaRoute
   '/objecoes': typeof ObjecoesRoute
   '/performance': typeof PerformanceRoute
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/calendario': typeof CalendarioRoute
   '/concorrentes': typeof ConcorrentesRoute
   '/copy': typeof CopyRoute
+  '/custos': typeof CustosRoute
   '/marca': typeof MarcaRoute
   '/objecoes': typeof ObjecoesRoute
   '/performance': typeof PerformanceRoute
@@ -106,6 +115,7 @@ export interface FileRouteTypes {
     | '/calendario'
     | '/concorrentes'
     | '/copy'
+    | '/custos'
     | '/marca'
     | '/objecoes'
     | '/performance'
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/calendario'
     | '/concorrentes'
     | '/copy'
+    | '/custos'
     | '/marca'
     | '/objecoes'
     | '/performance'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/calendario'
     | '/concorrentes'
     | '/copy'
+    | '/custos'
     | '/marca'
     | '/objecoes'
     | '/performance'
@@ -140,6 +152,7 @@ export interface RootRouteChildren {
   CalendarioRoute: typeof CalendarioRoute
   ConcorrentesRoute: typeof ConcorrentesRoute
   CopyRoute: typeof CopyRoute
+  CustosRoute: typeof CustosRoute
   MarcaRoute: typeof MarcaRoute
   ObjecoesRoute: typeof ObjecoesRoute
   PerformanceRoute: typeof PerformanceRoute
@@ -184,6 +197,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MarcaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/custos': {
+      id: '/custos'
+      path: '/custos'
+      fullPath: '/custos'
+      preLoaderRoute: typeof CustosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/copy': {
       id: '/copy'
       path: '/copy'
@@ -220,6 +240,7 @@ const rootRouteChildren: RootRouteChildren = {
   CalendarioRoute: CalendarioRoute,
   ConcorrentesRoute: ConcorrentesRoute,
   CopyRoute: CopyRoute,
+  CustosRoute: CustosRoute,
   MarcaRoute: MarcaRoute,
   ObjecoesRoute: ObjecoesRoute,
   PerformanceRoute: PerformanceRoute,

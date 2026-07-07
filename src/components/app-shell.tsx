@@ -14,6 +14,7 @@ import {
   ChevronRight,
   ShieldCheck,
   Crosshair,
+  DollarSign,
 } from "lucide-react";
 
 const NAV = [
@@ -26,6 +27,7 @@ const NAV = [
   { to: "/radar", label: "Radar de Oportunidade", icon: Radar },
   { to: "/concorrentes", label: "Radar de Concorrentes", icon: Crosshair },
   { to: "/validar", label: "Validar peça", icon: ShieldCheck },
+  { to: "/custos", label: "Custos IA", icon: DollarSign },
 ] as const;
 
 const STORAGE_KEY = "nl_mkt_sidebar_collapsed";

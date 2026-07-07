@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { SYSTEM_PROMPT } from "./nl-brand";
+import { logAnthropicUsage } from "./uso-ia.server";
 
 const Input = z.object({
   linha: z.enum(["A", "B", "AB", "C"]),
@@ -68,6 +69,13 @@ export const gerarCopy = createServerFn({ method: "POST" })
     const json = await res.json();
     const content: string = json?.content?.[0]?.text ?? "";
     const stopReason: string = json?.stop_reason ?? "";
+    await logAnthropicUsage({
+      modulo: "copy",
+      operacao: "geracao_copy",
+      tokens_input: json?.usage?.input_tokens ?? 0,
+      tokens_output: json?.usage?.output_tokens ?? 0,
+      detalhes: { linha: data.linha, formato: data.formato, dor: data.dor_titulo },
+    });
     if (stopReason === "max_tokens") {
       throw new Error("A resposta da IA foi cortada por limite de tokens. Tente novamente.");
     }

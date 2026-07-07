@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { logAnthropicUsage, logFixedUsage } from "./uso-ia.server";
 
 const Input = z.object({
   handle: z.string().min(1),
@@ -124,6 +125,14 @@ export const analisarConcorrente = createServerFn({ method: "POST" })
       );
     }
 
+    await logFixedUsage({
+      modulo: "concorrentes",
+      operacao: "busca_instagram",
+      custo_usd: 0.02,
+      modelo: "apify-instagram-scraper",
+      detalhes: { handle, posts: posts.length },
+    });
+
     const legendas = posts
       .map(
         (p: any, i: number) =>
@@ -169,6 +178,13 @@ ${legendas}`;
 
     const json = await res.json();
     const content: string = json?.content?.[0]?.text ?? "";
+    await logAnthropicUsage({
+      modulo: "concorrentes",
+      operacao: "analise_estrategica",
+      tokens_input: json?.usage?.input_tokens ?? 0,
+      tokens_output: json?.usage?.output_tokens ?? 0,
+      detalhes: { handle, nicho: data.nicho ?? null },
+    });
     let parsed: ConcorrentesOutput;
     try {
       parsed = JSON.parse(content);

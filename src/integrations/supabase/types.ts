@@ -215,6 +215,45 @@ export type Database = {
           },
         ]
       }
+      uso_ia: {
+        Row: {
+          created_at: string
+          custo_brl: number
+          custo_usd: number
+          detalhes: Json | null
+          id: string
+          modelo: string
+          modulo: string
+          operacao: string
+          tokens_input: number
+          tokens_output: number
+        }
+        Insert: {
+          created_at?: string
+          custo_brl?: number
+          custo_usd?: number
+          detalhes?: Json | null
+          id?: string
+          modelo?: string
+          modulo: string
+          operacao: string
+          tokens_input?: number
+          tokens_output?: number
+        }
+        Update: {
+          created_at?: string
+          custo_brl?: number
+          custo_usd?: number
+          detalhes?: Json | null
+          id?: string
+          modelo?: string
+          modulo?: string
+          operacao?: string
+          tokens_input?: number
+          tokens_output?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
