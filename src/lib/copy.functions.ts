@@ -24,8 +24,8 @@ export type CopyOutput = {
 export const gerarCopy = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => Input.parse(input))
   .handler(async ({ data }): Promise<CopyOutput> => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY não configurado");
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) throw new Error("ANTHROPIC_API_KEY não configurado");
 
     const userPrompt = [
       `Linha de negócio: ${data.linha}`,
@@ -39,19 +39,18 @@ export const gerarCopy = createServerFn({ method: "POST" })
       .filter(Boolean)
       .join("\n");
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userPrompt },
-        ],
-        response_format: { type: "json_object" },
+        model: "claude-sonnet-4-6",
+        max_tokens: 1000,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: "user", content: userPrompt }],
       }),
     });
 
@@ -63,7 +62,7 @@ export const gerarCopy = createServerFn({ method: "POST" })
     }
 
     const json = await res.json();
-    const content: string = json?.choices?.[0]?.message?.content ?? "";
+    const content: string = json?.content?.[0]?.text ?? "";
     let parsed: CopyOutput;
     try {
       parsed = JSON.parse(content);
