@@ -3,7 +3,6 @@ import { z } from "zod";
 
 const Input = z.object({
   handle: z.string().min(1),
-  legendas: z.string().min(50),
   nicho: z.string().optional(),
 });
 
@@ -15,6 +14,9 @@ export type Lacuna = {
 
 export type ConcorrentesOutput = {
   posts_analisados: number;
+  total_posts_encontrados: number;
+  media_curtidas: number;
+  media_comentarios: number;
   tom_predominante: string;
   tem_cta_alta_pressao: boolean;
   percentual_com_emoji: number;
@@ -86,11 +88,62 @@ export const analisarConcorrente = createServerFn({ method: "POST" })
       );
     }
 
-    const userPrompt = `Perfil analisado: ${data.handle}
+    const apifyToken = process.env.APIFY_API_TOKEN;
+    if (!apifyToken || !apifyToken.trim()) {
+      throw new Error(
+        "A chave APIFY_API_TOKEN não foi configurada. Adicione o secret no backend antes de analisar concorrentes.",
+      );
+    }
+
+    const handle = data.handle.replace(/^@+/, "").trim();
+
+    const apifyRes = await fetch(
+      "https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=" +
+        encodeURIComponent(apifyToken),
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          directUrls: [`https://www.instagram.com/${handle}/`],
+          resultsType: "posts",
+          resultsLimit: 20,
+        }),
+      },
+    );
+
+    if (!apifyRes.ok) {
+      throw new Error(
+        "Não foi possível acessar este perfil. Verifique se o @ está correto e se a conta é pública.",
+      );
+    }
+
+    const posts: any[] = await apifyRes.json();
+    if (!Array.isArray(posts) || posts.length === 0) {
+      throw new Error(
+        "Não foi possível acessar este perfil. Verifique se o @ está correto e se a conta é pública.",
+      );
+    }
+
+    const legendas = posts
+      .map(
+        (p: any, i: number) =>
+          `Post ${i + 1} | Curtidas: ${p.likesCount ?? 0} | Comentários: ${p.commentsCount ?? 0}\n${p.caption ?? "(sem legenda)"}`,
+      )
+      .join("\n---\n");
+
+    const totalPosts = posts.length;
+    const mediaCurtidas = Math.round(
+      posts.reduce((s, p) => s + (p.likesCount ?? 0), 0) / totalPosts,
+    );
+    const mediaComentarios = Math.round(
+      posts.reduce((s, p) => s + (p.commentsCount ?? 0), 0) / totalPosts,
+    );
+
+    const userPrompt = `Perfil analisado: ${handle}
 Nicho: ${data.nicho ?? "não informado"}
 
 Legendas dos posts:
-${data.legendas}`;
+${legendas}`;
 
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -133,5 +186,10 @@ ${data.legendas}`;
         parsed = JSON.parse(match[0]);
       }
     }
-    return parsed;
+    return {
+      ...parsed,
+      total_posts_encontrados: totalPosts,
+      media_curtidas: mediaCurtidas,
+      media_comentarios: mediaComentarios,
+    };
   });
