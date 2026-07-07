@@ -10,6 +10,7 @@ import {
   BookOpen,
   Radar,
   ArrowUpRight,
+  DollarSign,
 } from "lucide-react";
 import { LINHAS } from "@/lib/nl-brand";
 
@@ -21,6 +22,7 @@ function Dashboard() {
   const now = new Date();
   const mes = now.getMonth() + 1;
   const ano = now.getFullYear();
+  const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
   const { data: metrics } = useQuery({
     queryKey: ["dashboard-metrics", mes, ano],
@@ -47,6 +49,28 @@ function Dashboard() {
     },
   });
 
+  const { data: custos } = useQuery({
+    queryKey: ["uso-ia-mes", inicioMes],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("uso_ia")
+        .select("modulo, custo_brl")
+        .gte("created_at", inicioMes);
+      if (error) throw error;
+      const rows = (data ?? []) as { modulo: string; custo_brl: number }[];
+      const total = rows.reduce((s, r) => s + Number(r.custo_brl ?? 0), 0);
+      const porModulo = (m: string) => rows.filter((r) => r.modulo === m);
+      return {
+        total,
+        operacoes: rows.length,
+        copy: porModulo("copy").length,
+        concorrentes: porModulo("concorrentes").length,
+        validar: porModulo("validar").length,
+        media: rows.length > 0 ? total / rows.length : 0,
+      };
+    },
+  });
+
   return (
     <>
       <PageHeader
@@ -61,6 +85,29 @@ function Dashboard() {
           <MetricCard label="Posts publicados" value={metrics?.publicados ?? 0} />
           <MetricCard label="Linha mais ativa" value={metrics?.linhaTop ?? "—"} />
           <MetricCard label="Dor mais atacada" value={metrics?.dorTop ?? "—"} small />
+        </section>
+
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)]">
+              CUSTO IA — MÊS ATUAL
+            </div>
+            <Link
+              to="/custos"
+              className="inline-flex items-center gap-1 text-xs text-[color:var(--bronze)] hover:underline"
+            >
+              Detalhes <ArrowUpRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+            <MetricCard label="Total gasto" value={formatBRL(custos?.total ?? 0)} />
+            <MetricCard label="Gerações de copy" value={`${custos?.copy ?? 0} operações`} small />
+            <MetricCard label="Análises concorrentes" value={`${custos?.concorrentes ?? 0} análises`} small />
+            <MetricCard label="Validações" value={`${custos?.validar ?? 0} validações`} small />
+          </div>
+          <div className="text-sm text-[color:var(--muted-foreground)] mt-3">
+            Média por operação: {formatBRL(custos?.media ?? 0)}
+          </div>
         </section>
 
         <section className="border border-[color:var(--divisoria)] bg-[color:var(--bege)] p-6 md:p-8 rounded-lg">
@@ -89,6 +136,7 @@ function Dashboard() {
             <Shortcut to="/performance" icon={BarChart3} title="Performance" desc="Registrar e analisar posts publicados" />
             <Shortcut to="/marca" icon={BookOpen} title="Biblioteca de Marca" desc="Persona, paleta, tom e regras" />
             <Shortcut to="/radar" icon={Radar} title="Radar de Oportunidade" desc="Datas relevantes cruzadas com linhas" />
+            <Shortcut to="/custos" icon={DollarSign} title="Custos IA" desc="Rastreamento de tokens e custo por operação" />
           </div>
         </section>
 
