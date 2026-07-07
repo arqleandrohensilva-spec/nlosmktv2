@@ -9,8 +9,44 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RadarRouteImport } from './routes/radar'
+import { Route as PerformanceRouteImport } from './routes/performance'
+import { Route as ObjecoesRouteImport } from './routes/objecoes'
+import { Route as MarcaRouteImport } from './routes/marca'
+import { Route as CopyRouteImport } from './routes/copy'
+import { Route as CalendarioRouteImport } from './routes/calendario'
 import { Route as IndexRouteImport } from './routes/index'
 
+const RadarRoute = RadarRouteImport.update({
+  id: '/radar',
+  path: '/radar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PerformanceRoute = PerformanceRouteImport.update({
+  id: '/performance',
+  path: '/performance',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ObjecoesRoute = ObjecoesRouteImport.update({
+  id: '/objecoes',
+  path: '/objecoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarcaRoute = MarcaRouteImport.update({
+  id: '/marca',
+  path: '/marca',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CopyRoute = CopyRouteImport.update({
+  id: '/copy',
+  path: '/copy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CalendarioRoute = CalendarioRouteImport.update({
+  id: '/calendario',
+  path: '/calendario',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -19,28 +55,116 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/calendario': typeof CalendarioRoute
+  '/copy': typeof CopyRoute
+  '/marca': typeof MarcaRoute
+  '/objecoes': typeof ObjecoesRoute
+  '/performance': typeof PerformanceRoute
+  '/radar': typeof RadarRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/calendario': typeof CalendarioRoute
+  '/copy': typeof CopyRoute
+  '/marca': typeof MarcaRoute
+  '/objecoes': typeof ObjecoesRoute
+  '/performance': typeof PerformanceRoute
+  '/radar': typeof RadarRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/calendario': typeof CalendarioRoute
+  '/copy': typeof CopyRoute
+  '/marca': typeof MarcaRoute
+  '/objecoes': typeof ObjecoesRoute
+  '/performance': typeof PerformanceRoute
+  '/radar': typeof RadarRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/calendario'
+    | '/copy'
+    | '/marca'
+    | '/objecoes'
+    | '/performance'
+    | '/radar'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/calendario'
+    | '/copy'
+    | '/marca'
+    | '/objecoes'
+    | '/performance'
+    | '/radar'
+  id:
+    | '__root__'
+    | '/'
+    | '/calendario'
+    | '/copy'
+    | '/marca'
+    | '/objecoes'
+    | '/performance'
+    | '/radar'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CalendarioRoute: typeof CalendarioRoute
+  CopyRoute: typeof CopyRoute
+  MarcaRoute: typeof MarcaRoute
+  ObjecoesRoute: typeof ObjecoesRoute
+  PerformanceRoute: typeof PerformanceRoute
+  RadarRoute: typeof RadarRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/radar': {
+      id: '/radar'
+      path: '/radar'
+      fullPath: '/radar'
+      preLoaderRoute: typeof RadarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/performance': {
+      id: '/performance'
+      path: '/performance'
+      fullPath: '/performance'
+      preLoaderRoute: typeof PerformanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/objecoes': {
+      id: '/objecoes'
+      path: '/objecoes'
+      fullPath: '/objecoes'
+      preLoaderRoute: typeof ObjecoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/marca': {
+      id: '/marca'
+      path: '/marca'
+      fullPath: '/marca'
+      preLoaderRoute: typeof MarcaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/copy': {
+      id: '/copy'
+      path: '/copy'
+      fullPath: '/copy'
+      preLoaderRoute: typeof CopyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/calendario': {
+      id: '/calendario'
+      path: '/calendario'
+      fullPath: '/calendario'
+      preLoaderRoute: typeof CalendarioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -53,6 +177,12 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CalendarioRoute: CalendarioRoute,
+  CopyRoute: CopyRoute,
+  MarcaRoute: MarcaRoute,
+  ObjecoesRoute: ObjecoesRoute,
+  PerformanceRoute: PerformanceRoute,
+  RadarRoute: RadarRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
