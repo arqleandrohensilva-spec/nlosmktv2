@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RadarRouteImport } from './routes/radar'
 import { Route as PerformanceRouteImport } from './routes/performance'
 import { Route as ObjecoesRouteImport } from './routes/objecoes'
 import { Route as MarcaRouteImport } from './routes/marca'
@@ -16,6 +17,11 @@ import { Route as CopyRouteImport } from './routes/copy'
 import { Route as CalendarioRouteImport } from './routes/calendario'
 import { Route as IndexRouteImport } from './routes/index'
 
+const RadarRoute = RadarRouteImport.update({
+  id: '/radar',
+  path: '/radar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PerformanceRoute = PerformanceRouteImport.update({
   id: '/performance',
   path: '/performance',
@@ -54,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/marca': typeof MarcaRoute
   '/objecoes': typeof ObjecoesRoute
   '/performance': typeof PerformanceRoute
+  '/radar': typeof RadarRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +69,7 @@ export interface FileRoutesByTo {
   '/marca': typeof MarcaRoute
   '/objecoes': typeof ObjecoesRoute
   '/performance': typeof PerformanceRoute
+  '/radar': typeof RadarRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,6 +79,7 @@ export interface FileRoutesById {
   '/marca': typeof MarcaRoute
   '/objecoes': typeof ObjecoesRoute
   '/performance': typeof PerformanceRoute
+  '/radar': typeof RadarRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -81,8 +90,16 @@ export interface FileRouteTypes {
     | '/marca'
     | '/objecoes'
     | '/performance'
+    | '/radar'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/calendario' | '/copy' | '/marca' | '/objecoes' | '/performance'
+  to:
+    | '/'
+    | '/calendario'
+    | '/copy'
+    | '/marca'
+    | '/objecoes'
+    | '/performance'
+    | '/radar'
   id:
     | '__root__'
     | '/'
@@ -91,6 +108,7 @@ export interface FileRouteTypes {
     | '/marca'
     | '/objecoes'
     | '/performance'
+    | '/radar'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -100,10 +118,18 @@ export interface RootRouteChildren {
   MarcaRoute: typeof MarcaRoute
   ObjecoesRoute: typeof ObjecoesRoute
   PerformanceRoute: typeof PerformanceRoute
+  RadarRoute: typeof RadarRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/radar': {
+      id: '/radar'
+      path: '/radar'
+      fullPath: '/radar'
+      preLoaderRoute: typeof RadarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/performance': {
       id: '/performance'
       path: '/performance'
@@ -156,6 +182,7 @@ const rootRouteChildren: RootRouteChildren = {
   MarcaRoute: MarcaRoute,
   ObjecoesRoute: ObjecoesRoute,
   PerformanceRoute: PerformanceRoute,
+  RadarRoute: RadarRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
