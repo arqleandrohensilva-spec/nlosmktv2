@@ -10,6 +10,7 @@ const Input = z.object({
   dor_descricao: z.string().optional(),
   observacao: z.string().optional(),
   ajuste_raciocinio: z.string().optional(),
+  imagem_contexto: z.string().optional(),
 });
 
 export type CopyOutput = {
@@ -38,6 +39,7 @@ export const gerarCopy = createServerFn({ method: "POST" })
       `Dor da persona: ${data.dor_titulo}${data.dor_descricao ? " — " + data.dor_descricao : ""}`,
       data.observacao ? `Observação do fundador: ${data.observacao}` : "",
       data.ajuste_raciocinio ? `Ajuste solicitado no raciocínio: ${data.ajuste_raciocinio}` : "",
+      data.imagem_contexto ? `Imagem de referência do projeto (descrição técnica): ${data.imagem_contexto}` : "",
       "",
       "Responda EXCLUSIVAMENTE com o objeto JSON. Sem texto antes, sem texto depois, sem markdown, sem blocos de código, sem explicação. Apenas o JSON puro começando com { e terminando com }.",
     ]
