@@ -6,6 +6,7 @@ const Input = z.object({
   conteudo: z.string().min(1),
   linha: z.string().optional(),
   tom: z.string().optional(),
+  imagem_contexto: z.string().optional(),
 });
 
 export type KitOutput = {
@@ -65,6 +66,7 @@ export const gerarKitPublicacao = createServerFn({ method: "POST" })
     const userPrompt = [
       data.linha ? `Linha de negócio: ${data.linha}` : "",
       data.tom ? `Tom do conteúdo: ${data.tom}` : "",
+      data.imagem_contexto ? `Imagem de referência do projeto (descrição técnica): ${data.imagem_contexto}` : "",
       "Conteúdo mestre:",
       data.conteudo,
       "",
