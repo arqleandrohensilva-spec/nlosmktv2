@@ -41,6 +41,68 @@ export type Database = {
         }
         Relationships: []
       }
+      biblioteca_imagens: {
+        Row: {
+          ambiente: string | null
+          conteudos_gerados: Json | null
+          copies: Json | null
+          created_at: string
+          descricao_tecnica: string | null
+          id: string
+          linha: string
+          nome_arquivo: string
+          projeto_id: string | null
+          status_publicacao: string
+          tags: string[]
+          tipo: string
+          ultima_vez_usada: string | null
+          url_storage: string
+          vezes_usada: number
+        }
+        Insert: {
+          ambiente?: string | null
+          conteudos_gerados?: Json | null
+          copies?: Json | null
+          created_at?: string
+          descricao_tecnica?: string | null
+          id?: string
+          linha: string
+          nome_arquivo: string
+          projeto_id?: string | null
+          status_publicacao?: string
+          tags?: string[]
+          tipo: string
+          ultima_vez_usada?: string | null
+          url_storage: string
+          vezes_usada?: number
+        }
+        Update: {
+          ambiente?: string | null
+          conteudos_gerados?: Json | null
+          copies?: Json | null
+          created_at?: string
+          descricao_tecnica?: string | null
+          id?: string
+          linha?: string
+          nome_arquivo?: string
+          projeto_id?: string | null
+          status_publicacao?: string
+          tags?: string[]
+          tipo?: string
+          ultima_vez_usada?: string | null
+          url_storage?: string
+          vezes_usada?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "biblioteca_imagens_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       configuracoes: {
         Row: {
           chave: string
@@ -235,6 +297,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      projetos: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          id: string
+          linha: string
+          nome: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          linha: string
+          nome: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          linha?: string
+          nome?: string
+          status?: string
+        }
+        Relationships: []
       }
       uso_ia: {
         Row: {
