@@ -17,6 +17,7 @@ import {
   DollarSign,
   RefreshCw,
   Send,
+  Image as ImageIcon,
 } from "lucide-react";
 
 const NAV = [
@@ -24,6 +25,7 @@ const NAV = [
   { to: "/copy", label: "Motor de Copy IA", icon: Sparkles },
   { to: "/reescrever", label: "Reescritor", icon: RefreshCw },
   { to: "/kit-publicacao", label: "Kit de Publicação", icon: Send },
+  { to: "/biblioteca", label: "Biblioteca Visual", icon: ImageIcon },
   { to: "/calendario", label: "Calendário Editorial", icon: Calendar },
   { to: "/objecoes", label: "Banco de Objeções", icon: Shield },
   { to: "/performance", label: "Performance", icon: BarChart3 },

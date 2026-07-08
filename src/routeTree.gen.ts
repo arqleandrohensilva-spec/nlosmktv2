@@ -20,6 +20,7 @@ import { Route as CustosRouteImport } from './routes/custos'
 import { Route as CopyRouteImport } from './routes/copy'
 import { Route as ConcorrentesRouteImport } from './routes/concorrentes'
 import { Route as CalendarioRouteImport } from './routes/calendario'
+import { Route as BibliotecaRouteImport } from './routes/biblioteca'
 import { Route as IndexRouteImport } from './routes/index'
 
 const ValidarRoute = ValidarRouteImport.update({
@@ -77,6 +78,11 @@ const CalendarioRoute = CalendarioRouteImport.update({
   path: '/calendario',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BibliotecaRoute = BibliotecaRouteImport.update({
+  id: '/biblioteca',
+  path: '/biblioteca',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -85,6 +91,7 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/biblioteca': typeof BibliotecaRoute
   '/calendario': typeof CalendarioRoute
   '/concorrentes': typeof ConcorrentesRoute
   '/copy': typeof CopyRoute
@@ -99,6 +106,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/biblioteca': typeof BibliotecaRoute
   '/calendario': typeof CalendarioRoute
   '/concorrentes': typeof ConcorrentesRoute
   '/copy': typeof CopyRoute
@@ -114,6 +122,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/biblioteca': typeof BibliotecaRoute
   '/calendario': typeof CalendarioRoute
   '/concorrentes': typeof ConcorrentesRoute
   '/copy': typeof CopyRoute
@@ -130,6 +139,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/biblioteca'
     | '/calendario'
     | '/concorrentes'
     | '/copy'
@@ -144,6 +154,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/biblioteca'
     | '/calendario'
     | '/concorrentes'
     | '/copy'
@@ -158,6 +169,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/biblioteca'
     | '/calendario'
     | '/concorrentes'
     | '/copy'
@@ -173,6 +185,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BibliotecaRoute: typeof BibliotecaRoute
   CalendarioRoute: typeof CalendarioRoute
   ConcorrentesRoute: typeof ConcorrentesRoute
   CopyRoute: typeof CopyRoute
@@ -265,6 +278,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CalendarioRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/biblioteca': {
+      id: '/biblioteca'
+      path: '/biblioteca'
+      fullPath: '/biblioteca'
+      preLoaderRoute: typeof BibliotecaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -277,6 +297,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BibliotecaRoute: BibliotecaRoute,
   CalendarioRoute: CalendarioRoute,
   ConcorrentesRoute: ConcorrentesRoute,
   CopyRoute: CopyRoute,
