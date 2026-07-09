@@ -678,3 +678,153 @@ function Info({ label, valor }: { label: string; valor: string }) {
     </div>
   );
 }
+
+type ManualForm = { nome: string; informacoes_brutas: string; tipo: string; cidade: string };
+
+function ManualModal({
+  onClose,
+  onSubmit,
+  loading,
+  stage,
+}: {
+  onClose: () => void;
+  onSubmit: (v: ManualForm) => void;
+  loading: boolean;
+  stage: "idle" | "pesquisando" | "consolidando" | "criando";
+}) {
+  const [nome, setNome] = useState("");
+  const [info, setInfo] = useState("");
+  const [tipo, setTipo] = useState("nao_sei");
+  const [cidade, setCidade] = useState("SJC");
+
+  const podeSubmeter = nome.trim().length > 0 && info.trim().length >= 20 && !loading;
+
+  const stageLabel =
+    stage === "pesquisando"
+      ? `Pesquisando na web por ${nome || "empreendimento"}...`
+      : stage === "consolidando"
+        ? "Consolidando informações..."
+        : stage === "criando"
+          ? "Criando oportunidade..."
+          : "";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white border border-[color:var(--divisoria)] w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-[4px]">
+        <div className="px-6 py-5 border-b border-[color:var(--divisoria)] flex items-start justify-between">
+          <div>
+            <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)]">
+              RADAR DE MERCADO
+            </div>
+            <div className="font-serif text-xl text-[color:var(--graphite)] mt-1">
+              Adicionar lançamento
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="text-[color:var(--muted-foreground)] hover:text-[color:var(--graphite)] disabled:opacity-40"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <label className="block">
+            <span className="font-mono text-[10px] tracking-widest text-[color:var(--muted-foreground)]">
+              NOME DO EMPREENDIMENTO
+            </span>
+            <input
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              disabled={loading}
+              placeholder="Ex: Residencial Vila Nova, Loteamento Green Park..."
+              className="mt-1 w-full border border-[color:var(--divisoria)] rounded-[4px] px-3 py-2 text-sm"
+            />
+          </label>
+
+          <label className="block">
+            <span className="font-mono text-[10px] tracking-widest text-[color:var(--muted-foreground)]">
+              O QUE VOCÊ SABE SOBRE ELE
+            </span>
+            <textarea
+              value={info}
+              onChange={(e) => setInfo(e.target.value)}
+              disabled={loading}
+              rows={6}
+              placeholder="Cole aqui qualquer informação que tiver: nome da construtora, bairro, faixa de preço, link, o que ouviu de um corretor, foto de placa... quanto mais informação, melhor a análise."
+              className="mt-1 w-full border border-[color:var(--divisoria)] rounded-[4px] px-3 py-2 text-sm"
+            />
+            <span className="text-[11px] text-[color:var(--muted-foreground)] mt-1 block">
+              Mínimo 20 caracteres · {info.trim().length}/20
+            </span>
+          </label>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="font-mono text-[10px] tracking-widest text-[color:var(--muted-foreground)]">
+                TIPO
+              </span>
+              <select
+                value={tipo}
+                onChange={(e) => setTipo(e.target.value)}
+                disabled={loading}
+                className="mt-1 w-full border border-[color:var(--divisoria)] rounded-[4px] px-3 py-2 text-sm bg-white"
+              >
+                <option value="loteamento">Loteamento</option>
+                <option value="condominio">Condomínio</option>
+                <option value="apartamento">Apartamento</option>
+                <option value="comercial">Comercial</option>
+                <option value="nao_sei">Não sei</option>
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="font-mono text-[10px] tracking-widest text-[color:var(--muted-foreground)]">
+                CIDADE
+              </span>
+              <select
+                value={cidade}
+                onChange={(e) => setCidade(e.target.value)}
+                disabled={loading}
+                className="mt-1 w-full border border-[color:var(--divisoria)] rounded-[4px] px-3 py-2 text-sm bg-white"
+              >
+                <option value="SJC">SJC</option>
+                <option value="Jacareí">Jacareí</option>
+                <option value="Caçapava">Caçapava</option>
+                <option value="Outra">Outra</option>
+              </select>
+            </label>
+          </div>
+
+          {loading && (
+            <div className="flex items-center gap-2 text-sm text-[color:var(--bronze)] border border-[color:var(--bronze)]/30 bg-[color:var(--bege)] rounded-[4px] px-3 py-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {stageLabel}
+            </div>
+          )}
+        </div>
+
+        <div className="px-6 py-4 border-t border-[color:var(--divisoria)] flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="rounded-[4px] border border-[color:var(--divisoria)] bg-white px-4 py-2 text-sm text-[color:var(--graphite)] hover:border-[color:var(--bronze)] disabled:opacity-40"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() =>
+              onSubmit({ nome: nome.trim(), informacoes_brutas: info.trim(), tipo, cidade })
+            }
+            disabled={!podeSubmeter}
+            className="rounded-[4px] bg-[color:var(--graphite)] px-4 py-2 text-sm text-white hover:bg-black disabled:opacity-40"
+          >
+            {loading ? "Processando…" : "Pesquisar e adicionar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
