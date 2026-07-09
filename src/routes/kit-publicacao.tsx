@@ -205,6 +205,8 @@ function KitPublicacaoPage() {
                 label="INSTAGRAM FEED"
                 onCopy={() => copiar(resultado.feed)}
                 counter={`${resultado.feed.length} / 2.200`}
+                bufferText={resultado.feed}
+                bufferKind="projeto"
               >
                 <p className="whitespace-pre-wrap">{resultado.feed}</p>
               </CanalCard>
@@ -233,6 +235,8 @@ function KitPublicacaoPage() {
                 icon={<Play className="h-4 w-4" />}
                 label="REELS — LEGENDA"
                 onCopy={() => copiar(resultado.reels)}
+                bufferText={resultado.reels}
+                bufferKind="projeto"
                 footer={
                   <span className="text-[color:var(--muted-foreground)]">
                     Primeiras 125 caracteres aparecem antes do "ver mais".
@@ -249,6 +253,8 @@ function KitPublicacaoPage() {
                 icon={<Briefcase className="h-4 w-4" />}
                 label="LINKEDIN"
                 onCopy={() => copiar(resultado.linkedin)}
+                bufferText={resultado.linkedin}
+                bufferKind="posicionamento"
               >
                 <p className="whitespace-pre-wrap">{resultado.linkedin}</p>
               </CanalCard>
