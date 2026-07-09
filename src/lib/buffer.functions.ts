@@ -39,10 +39,21 @@ export const listarPerfisBuffer = createServerFn({ method: "GET" }).handler(
   async (): Promise<{ profiles: BufferProfile[]; error?: string }> => {
     const token = await readToken();
     if (!token) return { profiles: [], error: "Token do Buffer não configurado." };
-    const res = await fetch(
-      `https://api.bufferapp.com/1/profiles.json?access_token=${encodeURIComponent(token)}`,
-    );
+    const res = await fetch("https://api.bufferapp.com/1/profiles.json", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     if (!res.ok) {
+      if (res.status === 401) {
+        const check = await fetch("https://api.bufferapp.com/1/user.json", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        return {
+          profiles: [],
+          error: check.ok
+            ? "Token válido, mas sem perfis acessíveis."
+            : `Token inválido (HTTP ${res.status}).`,
+        };
+      }
       return { profiles: [], error: `Token inválido (HTTP ${res.status}).` };
     }
     const json = (await res.json()) as any[];
@@ -62,10 +73,20 @@ export const testarConexaoBuffer = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<{ ok: boolean; count: number; message: string }> => {
     const token = data.token?.trim() || (await readToken());
     if (!token) return { ok: false, count: 0, message: "Token do Buffer não configurado." };
-    const res = await fetch(
-      `https://api.bufferapp.com/1/profiles.json?access_token=${encodeURIComponent(token)}`,
-    );
-    if (!res.ok) return { ok: false, count: 0, message: `Token inválido (HTTP ${res.status}).` };
+    const res = await fetch("https://api.bufferapp.com/1/profiles.json", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      if (res.status === 401) {
+        const check = await fetch("https://api.bufferapp.com/1/user.json", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (check.ok) {
+          return { ok: true, count: 0, message: "Token válido — nenhum perfil conectado." };
+        }
+      }
+      return { ok: false, count: 0, message: `Token inválido (HTTP ${res.status}).` };
+    }
     const json = (await res.json()) as any[];
     return { ok: true, count: json?.length ?? 0, message: `Conectado — ${json?.length ?? 0} perfis encontrados.` };
   });
@@ -113,16 +134,17 @@ export const agendarBuffer = createServerFn({ method: "POST" })
     const unix = Math.floor(new Date(data.scheduled_at).getTime() / 1000);
     if (!Number.isFinite(unix) || unix <= 0) throw new Error("Data/hora inválida.");
 
-    const body = new URLSearchParams();
-    body.append("access_token", token);
-    body.append("text", data.text);
-    body.append("scheduled_at", String(unix));
-    for (const pid of data.profile_ids) body.append("profile_ids[]", pid);
-
     const res = await fetch("https://api.bufferapp.com/1/updates/create.json", {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        profile_ids: data.profile_ids,
+        text: data.text,
+        scheduled_at: data.scheduled_at,
+      }),
     });
     const json = await res.json().catch(() => ({} as any));
     if (!res.ok || json?.success === false) {
