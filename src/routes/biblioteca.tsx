@@ -12,6 +12,7 @@ import {
 } from "@/lib/antes-depois.functions";
 import { signBibliotecaUrls } from "@/components/biblioteca-picker";
 import { BibliotecaPicker, type BibliotecaImagemLite } from "@/components/biblioteca-picker";
+import { BufferButton } from "@/components/buffer-modal";
 import {
   X,
   Upload,
