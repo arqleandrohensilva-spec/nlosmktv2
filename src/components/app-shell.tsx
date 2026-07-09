@@ -22,6 +22,7 @@ import {
   Image as ImageIcon,
   MapPin,
   UserCheck,
+  Settings,
 } from "lucide-react";
 
 const NAV = [
