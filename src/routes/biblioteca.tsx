@@ -1237,9 +1237,28 @@ function NovoComparativoModal({ onClose }: { onClose: () => void }) {
   const [projetoId, setProjetoId] = useState("");
   const [linha, setLinha] = useState("A");
   const [ambiente, setAmbiente] = useState("Sala de estar");
-  const [antes, setAntes] = useState<BibliotecaImagemLite | null>(null);
-  const [depois, setDepois] = useState<BibliotecaImagemLite | null>(null);
+  const [antesMode, setAntesMode] = useState<"upload" | "biblioteca">("upload");
+  const [depoisMode, setDepoisMode] = useState<"upload" | "biblioteca">("upload");
+  const [antesImg, setAntesImg] = useState<BibliotecaImagemLite | null>(null);
+  const [depoisImg, setDepoisImg] = useState<BibliotecaImagemLite | null>(null);
+  const [antesFile, setAntesFile] = useState<File | null>(null);
+  const [depoisFile, setDepoisFile] = useState<File | null>(null);
+  const [antesPreview, setAntesPreview] = useState<string | null>(null);
+  const [depoisPreview, setDepoisPreview] = useState<string | null>(null);
   const [pickerAlvo, setPickerAlvo] = useState<"antes" | "depois" | null>(null);
+
+  useEffect(() => {
+    if (!antesFile) { setAntesPreview(null); return; }
+    const url = URL.createObjectURL(antesFile);
+    setAntesPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [antesFile]);
+  useEffect(() => {
+    if (!depoisFile) { setDepoisPreview(null); return; }
+    const url = URL.createObjectURL(depoisFile);
+    setDepoisPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [depoisFile]);
 
   async function pathToBase64(path: string): Promise<{ base64: string; media_type: string }> {
     const { data, error } = await supabase.storage.from("biblioteca-visual").download(path);
@@ -1253,20 +1272,49 @@ function NovoComparativoModal({ onClose }: { onClose: () => void }) {
     return { base64: btoa(binary), media_type: data.type || "image/jpeg" };
   }
 
+  async function preparar(
+    slot: "antes" | "depois",
+  ): Promise<{ id: string; base64: string; media_type: string }> {
+    const mode = slot === "antes" ? antesMode : depoisMode;
+    if (mode === "biblioteca") {
+      const img = slot === "antes" ? antesImg : depoisImg;
+      if (!img) throw new Error(`Escolha a imagem ${slot} na biblioteca.`);
+      const b = await pathToBase64(img.url_storage);
+      return { id: img.id, base64: b.base64, media_type: b.media_type };
+    }
+    const file = slot === "antes" ? antesFile : depoisFile;
+    if (!file) throw new Error(`Faça upload da imagem ${slot}.`);
+    const path = await uploadParaStorage(file);
+    const { base64, media_type } = await fileToBase64(file);
+    const { data: row, error } = await supabase
+      .from("biblioteca_imagens")
+      .insert({
+        nome_arquivo: file.name,
+        url_storage: path,
+        tipo: "foto_real",
+        linha,
+        ambiente,
+        projeto_id: projetoId || null,
+      })
+      .select("id")
+      .single();
+    if (error || !row) throw new Error(`Falha ao registrar imagem ${slot}: ${error?.message ?? ""}`);
+    return { id: row.id, base64, media_type };
+  }
+
   const mut = useMutation({
     mutationFn: async () => {
       if (!nome.trim()) throw new Error("Dê um nome ao comparativo.");
-      if (!antes || !depois) throw new Error("Escolha as duas imagens.");
-      const a = await pathToBase64(antes.url_storage);
-      const d = await pathToBase64(depois.url_storage);
+      const a = await preparar("antes");
+      const d = await preparar("depois");
       return gerar({
         data: {
           nome,
           linha,
           ambiente,
           projeto_id: projetoId || null,
-          imagem_antes_id: antes.id,
-          imagem_depois_id: depois.id,
+          imagem_antes_id: a.id,
+          imagem_depois_id: d.id,
           antes_base64: a.base64,
           antes_media_type: a.media_type,
           depois_base64: d.base64,
@@ -1277,6 +1325,7 @@ function NovoComparativoModal({ onClose }: { onClose: () => void }) {
     onSuccess: () => {
       toast.success("Comparativo criado.");
       qc.invalidateQueries({ queryKey: ["antes-depois"] });
+      qc.invalidateQueries({ queryKey: ["biblioteca"] });
       onClose();
     },
     onError: (err: any) => toast.error(err?.message ?? "Erro ao gerar comparativo"),
@@ -1321,23 +1370,89 @@ function NovoComparativoModal({ onClose }: { onClose: () => void }) {
 
           <div className="grid grid-cols-2 gap-3">
             {(["antes", "depois"] as const).map((slot) => {
-              const img = slot === "antes" ? antes : depois;
+              const mode = slot === "antes" ? antesMode : depoisMode;
+              const setMode = slot === "antes" ? setAntesMode : setDepoisMode;
+              const file = slot === "antes" ? antesFile : depoisFile;
+              const setFile = slot === "antes" ? setAntesFile : setDepoisFile;
+              const preview = slot === "antes" ? antesPreview : depoisPreview;
+              const img = slot === "antes" ? antesImg : depoisImg;
+              const setImg = slot === "antes" ? setAntesImg : setDepoisImg;
               return (
                 <div key={slot}>
                   <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)] mb-1 uppercase" style={{ fontFamily: "Courier New, monospace" }}>
                     IMAGEM {slot}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setPickerAlvo(slot)}
-                    className="w-full aspect-[4/3] border border-dashed border-[color:var(--divisoria)] rounded-[4px] bg-[color:var(--gelo)] hover:border-[color:var(--bronze)] flex items-center justify-center overflow-hidden"
-                  >
-                    {img?.signed_url ? (
-                      <img src={img.signed_url} alt={slot} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="text-[color:var(--muted-foreground)] text-xs">Escolher da biblioteca</div>
-                    )}
-                  </button>
+                  <div className="flex gap-1 mb-2">
+                    {(["upload", "biblioteca"] as const).map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setMode(m)}
+                        className={`flex-1 px-2 py-1 text-[10px] font-mono tracking-widest uppercase rounded-[3px] border transition-colors ${
+                          mode === m
+                            ? "bg-[color:var(--graphite)] text-white border-[color:var(--graphite)]"
+                            : "bg-white text-[color:var(--graphite)] border-[color:var(--divisoria)] hover:border-[color:var(--bronze)]"
+                        }`}
+                      >
+                        {m === "upload" ? "Upload novo" : "Da biblioteca"}
+                      </button>
+                    ))}
+                  </div>
+                  {mode === "upload" ? (
+                    <label
+                      className="w-full aspect-[4/3] border border-dashed border-[#D1D1D1] rounded-[4px] bg-[#F5F5F5] hover:border-[color:var(--bronze)] flex items-center justify-center overflow-hidden cursor-pointer relative"
+                    >
+                      {preview ? (
+                        <>
+                          <img src={preview} alt={slot} className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); setFile(null); }}
+                            className="absolute top-1.5 right-1.5 bg-white/95 rounded-full p-1 border border-[color:var(--divisoria)] hover:border-[color:var(--bronze)]"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center gap-1 text-[color:var(--muted-foreground)] text-[12px] px-2 text-center">
+                          <Upload className="h-5 w-5" />
+                          <span>Arraste ou clique para fazer upload</span>
+                          <span className="text-[10px]">JPG, PNG ou WebP</span>
+                        </div>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) setFile(f);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setPickerAlvo(slot)}
+                      className="w-full aspect-[4/3] border border-dashed border-[#D1D1D1] rounded-[4px] bg-[#F5F5F5] hover:border-[color:var(--bronze)] flex items-center justify-center overflow-hidden relative"
+                    >
+                      {img?.signed_url ? (
+                        <>
+                          <img src={img.signed_url} alt={slot} className="w-full h-full object-cover" />
+                          <span
+                            role="button"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setImg(null); }}
+                            className="absolute top-1.5 right-1.5 bg-white/95 rounded-full p-1 border border-[color:var(--divisoria)] hover:border-[color:var(--bronze)]"
+                          >
+                            <X className="h-3 w-3" />
+                          </span>
+                        </>
+                      ) : (
+                        <div className="text-[color:var(--muted-foreground)] text-xs">Escolher da biblioteca</div>
+                      )}
+                    </button>
+                  )}
                 </div>
               );
             })}
@@ -1356,8 +1471,8 @@ function NovoComparativoModal({ onClose }: { onClose: () => void }) {
           open={pickerAlvo !== null}
           onClose={() => setPickerAlvo(null)}
           onSelect={(img) => {
-            if (pickerAlvo === "antes") setAntes(img);
-            if (pickerAlvo === "depois") setDepois(img);
+            if (pickerAlvo === "antes") setAntesImg(img);
+            if (pickerAlvo === "depois") setDepoisImg(img);
             setPickerAlvo(null);
           }}
         />
