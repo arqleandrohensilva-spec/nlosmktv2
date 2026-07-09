@@ -859,6 +859,7 @@ function AbaProjetos({ onVer }: { onVer: () => void }) {
   const qc = useQueryClient();
   const [novoModal, setNovoModal] = useState(false);
   const [editando, setEditando] = useState<any | null>(null);
+  const [narrativaProj, setNarrativaProj] = useState<any | null>(null);
 
   const { data: projetos } = useQuery({
     queryKey: ["projetos-detalhe"],
@@ -928,6 +929,12 @@ function AbaProjetos({ onVer }: { onVer: () => void }) {
                 >
                   Editar
                 </button>
+                <button
+                  onClick={() => setNarrativaProj(p)}
+                  className="text-xs px-3 py-1.5 rounded-[4px] border border-[color:var(--divisoria)] hover:border-[color:var(--bronze)] inline-flex items-center gap-1"
+                >
+                  <Sparkles className="h-3 w-3" /> Narrativa
+                </button>
                 {p.status !== "arquivado" && (
                   <button
                     onClick={() => arquivar.mutate(p.id)}
@@ -944,6 +951,9 @@ function AbaProjetos({ onVer }: { onVer: () => void }) {
 
       {novoModal && <ProjetoModal onClose={() => setNovoModal(false)} onCreated={() => setNovoModal(false)} />}
       {editando && <ProjetoModal projeto={editando} onClose={() => setEditando(null)} onCreated={() => setEditando(null)} />}
+      {narrativaProj && (
+        <NarrativaProjetoDrawer projeto={narrativaProj} onClose={() => setNarrativaProj(null)} />
+      )}
     </div>
   );
 }
