@@ -820,7 +820,7 @@ function InteracaoModal({
   );
 }
 
-function NovaProspeccaoModal({
+export function NovaProspeccaoModal({
   lancamentos,
   onClose,
   onCreated,
