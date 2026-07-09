@@ -322,6 +322,8 @@ function CanalCard({
   counter,
   footer,
   className = "",
+  bufferText,
+  bufferKind,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -330,6 +332,8 @@ function CanalCard({
   counter?: string;
   footer?: React.ReactNode;
   className?: string;
+  bufferText?: string;
+  bufferKind?: "posicionamento" | "projeto" | "bastidor";
 }) {
   return (
     <div
@@ -360,6 +364,15 @@ function CanalCard({
         >
           <Copy className="h-3 w-3" /> Copiar
         </button>
+        {bufferText && (
+          <BufferButton
+            text={bufferText}
+            variant="chip"
+            origem="kit-publicacao"
+            kind={bufferKind}
+            label="Agendar no Buffer"
+          />
+        )}
       </div>
     </div>
   );
