@@ -218,6 +218,57 @@ export type Database = {
         }
         Relationships: []
       }
+      estudos_caso: {
+        Row: {
+          cidade: string | null
+          conteudos: Json | null
+          created_at: string
+          detalhe_tecnico: string | null
+          id: string
+          imagens_ids: string[]
+          linha: string
+          nome_projeto: string
+          partido: string
+          problema: string
+          restricoes: string | null
+          resultado: string
+          solucoes: string[]
+          status: string
+        }
+        Insert: {
+          cidade?: string | null
+          conteudos?: Json | null
+          created_at?: string
+          detalhe_tecnico?: string | null
+          id?: string
+          imagens_ids?: string[]
+          linha: string
+          nome_projeto: string
+          partido: string
+          problema: string
+          restricoes?: string | null
+          resultado: string
+          solucoes?: string[]
+          status?: string
+        }
+        Update: {
+          cidade?: string | null
+          conteudos?: Json | null
+          created_at?: string
+          detalhe_tecnico?: string | null
+          id?: string
+          imagens_ids?: string[]
+          linha?: string
+          nome_projeto?: string
+          partido?: string
+          problema?: string
+          restricoes?: string | null
+          resultado?: string
+          solucoes?: string[]
+          status?: string
+        }
+        Relationships: []
+      }
       lancamentos: {
         Row: {
           bairro: string | null
