@@ -108,7 +108,6 @@ function AbaBiblioteca({ projetoInicial }: { projetoInicial?: string }) {
   const [busca, setBusca] = useState("");
   const [linha, setLinha] = useState("");
   const [tipo, setTipo] = useState("");
-  const [status, setStatus] = useState("");
   const [projetoId, setProjetoId] = useState(projetoInicial ?? "");
   const [selecionada, setSelecionada] = useState<any | null>(null);
 
@@ -122,7 +121,7 @@ function AbaBiblioteca({ projetoInicial }: { projetoInicial?: string }) {
   });
 
   const { data: imagens } = useQuery({
-    queryKey: ["biblioteca", linha, tipo, status, projetoId],
+    queryKey: ["biblioteca", linha, tipo, projetoId],
     queryFn: async () => {
       let q = supabase
         .from("biblioteca_imagens")
@@ -130,7 +129,6 @@ function AbaBiblioteca({ projetoInicial }: { projetoInicial?: string }) {
         .order("created_at", { ascending: false });
       if (linha) q = q.eq("linha", linha);
       if (tipo) q = q.eq("tipo", tipo);
-      if (status) q = q.eq("status_publicacao", status);
       if (projetoId) q = q.eq("projeto_id", projetoId);
       const { data, error } = await q;
       if (error) throw error;
@@ -184,12 +182,6 @@ function AbaBiblioteca({ projetoInicial }: { projetoInicial?: string }) {
           <option value="">Todos</option>
           <option value="foto_real">Foto real</option>
           <option value="render">Render</option>
-        </FilterSel>
-        <FilterSel value={status} onChange={setStatus} label="Status">
-          <option value="">Todos</option>
-          <option value="nao_usado">Não usado</option>
-          <option value="rascunho">Rascunho</option>
-          <option value="publicado">Publicado</option>
         </FilterSel>
         <FilterSel value={projetoId} onChange={setProjetoId} label="Projeto">
           <option value="">Todos</option>
