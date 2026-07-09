@@ -303,3 +303,124 @@ export const atualizarLancamento = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return row;
   });
+
+const ManualInput = z.object({
+  nome: z.string().min(1),
+  informacoes_brutas: z.string().min(20),
+  tipo: z.string().min(1),
+  cidade: z.string().min(1),
+});
+
+const SYSTEM_PROMPT_MANUAL = `Você é o radar de mercado da NL Arquitetos.
+Recebe o nome de um empreendimento imobiliário e informações brutas sobre ele, e deve:
+
+1. Pesquisar na web por mais informações sobre esse empreendimento específico
+2. Consolidar tudo (o que foi informado + o que encontrou)
+3. Retornar um registro completo e estruturado
+
+Responda EXCLUSIVAMENTE com JSON puro, sem markdown:
+{
+  "nome": "nome oficial do empreendimento",
+  "tipo": "loteamento|condominio|apartamento|comercial",
+  "cidade": "cidade",
+  "construtora": "nome da construtora ou null",
+  "bairro": "bairro ou região",
+  "faixa_preco": "faixa de preço ou null",
+  "descricao": "descrição completa em 3-4 frases combinando o que foi informado e o que foi encontrado na web",
+  "url_fonte": "melhor URL encontrada ou null",
+  "data_lancamento": "data aproximada ou null",
+  "informacao_adicional": "qualquer informação relevante encontrada na web que não estava nas informações brutas"
+}`;
+
+export const adicionarManual = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => ManualInput.parse(input))
+  .handler(async ({ data }) => {
+    const userPrompt = [
+      `Nome do empreendimento: ${data.nome}`,
+      `Cidade: ${data.cidade}`,
+      `Tipo informado: ${data.tipo}`,
+      ``,
+      `Informações que tenho:`,
+      data.informacoes_brutas,
+      ``,
+      `Pesquise na web por mais informações sobre esse empreendimento e retorne o registro completo e estruturado.`,
+    ].join("\n");
+
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey(),
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 3000,
+        tools: [{ type: "web_search_20250305", name: "web_search" }],
+        system: SYSTEM_PROMPT_MANUAL,
+        messages: [{ role: "user", content: userPrompt }],
+      }),
+    });
+
+    if (!res.ok) {
+      const body = await res.text();
+      if (res.status === 429) throw new Error("Limite de requisições atingido.");
+      if (res.status === 402) throw new Error("Créditos de IA esgotados.");
+      throw new Error(`Falha na IA (${res.status}): ${body.slice(0, 300)}`);
+    }
+
+    const json = await res.json();
+    const blocks: Array<{ type: string; text?: string }> = json?.content ?? [];
+    const finalText = blocks.filter((b) => b.type === "text").map((b) => b.text ?? "").join("\n").trim();
+    const parsed = extractJson<{
+      nome: string;
+      tipo: string;
+      cidade: string;
+      construtora: string | null;
+      bairro: string | null;
+      faixa_preco: string | null;
+      descricao: string | null;
+      url_fonte: string | null;
+      data_lancamento: string | null;
+      informacao_adicional: string | null;
+    }>(finalText);
+
+    const tipo = ["loteamento", "condominio", "apartamento", "comercial"].includes(parsed.tipo)
+      ? parsed.tipo
+      : (["loteamento", "condominio", "apartamento", "comercial"].includes(data.tipo) ? data.tipo : "loteamento");
+
+    const client = sb();
+    const descricao = parsed.informacao_adicional
+      ? `${parsed.descricao ?? ""}\n\nInfo adicional: ${parsed.informacao_adicional}`.trim()
+      : parsed.descricao;
+
+    const { data: inserted, error } = await client
+      .from("lancamentos")
+      .insert({
+        nome: parsed.nome || data.nome,
+        tipo,
+        cidade: parsed.cidade || data.cidade,
+        construtora: parsed.construtora,
+        bairro: parsed.bairro,
+        faixa_preco: parsed.faixa_preco,
+        descricao,
+        url_fonte: parsed.url_fonte,
+        data_lancamento: parsed.data_lancamento,
+        status: "novo",
+        notas: "Adicionado manualmente",
+      })
+      .select("*")
+      .single();
+
+    if (error) throw new Error(`Falha ao salvar lançamento: ${error.message}`);
+
+    await logAnthropicUsage({
+      modulo: "radar-mercado",
+      operacao: "adicao_manual",
+      tokens_input: json?.usage?.input_tokens ?? 0,
+      tokens_output: json?.usage?.output_tokens ?? 0,
+      detalhes: { nome: data.nome, cidade: data.cidade },
+    });
+
+    return inserted;
+  });
