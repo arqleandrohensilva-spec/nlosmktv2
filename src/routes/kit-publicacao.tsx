@@ -8,6 +8,7 @@ import { LINHAS, PILARES } from "@/lib/nl-brand";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Copy, RotateCcw, Square, Layers, Play, Briefcase, Mail, Save, Image as ImageIcon, X } from "lucide-react";
 import { BibliotecaPicker, type BibliotecaImagemLite } from "@/components/biblioteca-picker";
+import { BufferButton } from "@/components/buffer-modal";
 import { toast } from "sonner";
 
 type Search = { conteudo?: string };
