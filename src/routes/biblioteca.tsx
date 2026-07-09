@@ -12,7 +12,7 @@ import {
 } from "@/lib/antes-depois.functions";
 import { signBibliotecaUrls } from "@/components/biblioteca-picker";
 import { BibliotecaPicker, type BibliotecaImagemLite } from "@/components/biblioteca-picker";
-import { BufferButton } from "@/components/buffer-modal";
+import { AgendarButton } from "@/components/agendar-modal";
 import {
   X,
   Upload,
@@ -409,12 +409,12 @@ function DrawerDetalhes({ imagem, onClose }: { imagem: any; onClose: () => void 
                 <Copy className="h-3 w-3" /> Copiar
               </button>
               {textoAtual && (
-                <BufferButton
+                <AgendarButton
                   text={textoAtual}
                   variant="chip"
                   origem={`biblioteca:${conteudoTab}`}
                   kind={conteudoTab === "reels" || conteudoTab === "roteiro" ? "projeto" : conteudoTab === "stories" ? "bastidor" : "posicionamento"}
-                  label="Agendar no Buffer"
+                  label="Agendar publicação"
                 />
               )}
             </div>

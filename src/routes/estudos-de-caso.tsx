@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/page-header";
 import { LINHAS } from "@/lib/nl-brand";
 import { gerarEstudoCaso, type EstudoCasoOutput } from "@/lib/estudos.functions";
 import { BibliotecaPicker, signBibliotecaUrls, type BibliotecaImagemLite } from "@/components/biblioteca-picker";
-import { BufferButton } from "@/components/buffer-modal";
+import { AgendarButton } from "@/components/agendar-modal";
 import { toast } from "sonner";
 import {
   Loader2,
@@ -477,12 +477,12 @@ function EstudosPage() {
                   const kind: "posicionamento" | "projeto" | "bastidor" =
                     tab === "linkedin" ? "posicionamento" : tab === "reels" || tab === "carrossel" ? "projeto" : "projeto";
                   return (
-                    <BufferButton
+                    <AgendarButton
                       text={textoAba}
                       variant="chip"
                       origem={`estudos-caso:${tab}`}
                       kind={kind}
-                      label="Agendar no Buffer"
+                      label="Agendar publicação"
                     />
                   );
                 })()}

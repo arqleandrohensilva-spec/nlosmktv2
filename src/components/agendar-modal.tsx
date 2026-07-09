@@ -1,15 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { agendarBuffer, listarPerfisBuffer, type BufferProfile } from "@/lib/buffer.functions";
+import { agendarViaWebhook } from "@/lib/make.functions";
 import { toast } from "sonner";
 import { Send, X, Loader2, CalendarClock } from "lucide-react";
 
 type Kind = "posicionamento" | "projeto" | "bastidor";
 
+const CANAIS = [
+  { value: "instagram", label: "Instagram" },
+  { value: "linkedin", label: "LinkedIn" },
+  { value: "facebook", label: "Facebook" },
+  { value: "twitter", label: "Twitter / X" },
+];
+
 function nextSuggestion(kind: Kind = "projeto"): Date {
-  // 2 = terça (posicionamento) / 4 = quinta (projeto) / 6 = sábado (bastidor)
-  const map = { posicionamento: { dow: 2, hour: 19 }, projeto: { dow: 4, hour: 19 }, bastidor: { dow: 6, hour: 10 } } as const;
+  const map = {
+    posicionamento: { dow: 2, hour: 19 },
+    projeto: { dow: 4, hour: 19 },
+    bastidor: { dow: 6, hour: 10 },
+  } as const;
   const cfg = map[kind];
   const now = new Date();
   const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), cfg.hour, 0, 0, 0);
@@ -25,7 +35,7 @@ function toLocalInput(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function BufferModal({
+export function AgendarModal({
   open,
   onClose,
   initialText,
@@ -42,11 +52,10 @@ export function BufferModal({
   postId?: string;
   onScheduled?: () => void;
 }) {
-  const listar = useServerFn(listarPerfisBuffer);
-  const agendar = useServerFn(agendarBuffer);
+  const agendar = useServerFn(agendarViaWebhook);
   const [texto, setTexto] = useState(initialText);
   const [quando, setQuando] = useState<string>(toLocalInput(nextSuggestion(kind)));
-  const [profileId, setProfileId] = useState<string>("");
+  const [canal, setCanal] = useState<string>("instagram");
 
   useEffect(() => {
     if (open) {
@@ -54,20 +63,6 @@ export function BufferModal({
       setQuando(toLocalInput(nextSuggestion(kind)));
     }
   }, [open, initialText, kind]);
-
-  const perfis = useQuery({
-    queryKey: ["buffer-profiles"],
-    queryFn: () => listar(),
-    enabled: open,
-    staleTime: 60_000,
-  });
-
-  const profiles: BufferProfile[] = perfis.data?.profiles ?? [];
-  const perfilErr = perfis.data?.error;
-
-  useEffect(() => {
-    if (!profileId && profiles[0]) setProfileId(profiles[0].id);
-  }, [profiles, profileId]);
 
   const iso = useMemo(() => {
     if (!quando) return "";
@@ -79,20 +74,21 @@ export function BufferModal({
     mutationFn: async () =>
       agendar({
         data: {
-          profile_ids: [profileId],
-          text: texto,
-          scheduled_at: iso,
+          texto,
+          data_hora: iso,
+          canal,
+          conteudo_tipo: kind,
           origem,
           post_id: postId,
         },
       }),
     onSuccess: () => {
       const d = new Date(quando);
-      toast.success(`Post agendado para ${d.toLocaleString("pt-BR")} no Buffer`);
+      toast.success(`Publicação agendada para ${d.toLocaleString("pt-BR")}`);
       onScheduled?.();
       onClose();
     },
-    onError: (err: any) => toast.error(err?.message ?? "Falha ao agendar no Buffer"),
+    onError: (err: any) => toast.error(err?.message ?? "Falha ao agendar publicação"),
   });
 
   if (!open) return null;
@@ -106,7 +102,7 @@ export function BufferModal({
         <div className="flex items-center justify-between px-5 py-4 border-b border-[color:var(--divisoria)]">
           <div className="flex items-center gap-2">
             <CalendarClock className="h-4 w-4 text-[color:var(--bronze)]" />
-            <div className="font-serif text-lg text-[color:var(--graphite)]">Agendar no Buffer</div>
+            <div className="font-serif text-lg text-[color:var(--graphite)]">Agendar publicação</div>
           </div>
           <button onClick={onClose} className="p-1 text-[color:var(--muted-foreground)] hover:text-[color:var(--graphite)]">
             <X className="h-4 w-4" />
@@ -145,27 +141,15 @@ export function BufferModal({
 
             <label className="block">
               <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)] mb-2">CANAL</div>
-              {perfis.isLoading ? (
-                <div className="text-sm text-[color:var(--muted-foreground)] flex items-center gap-2">
-                  <Loader2 className="h-3 w-3 animate-spin" /> Carregando perfis…
-                </div>
-              ) : perfilErr ? (
-                <div className="text-xs text-red-600">{perfilErr} Configure em <a href="/configuracoes" className="underline">/configuracoes</a>.</div>
-              ) : profiles.length === 0 ? (
-                <div className="text-xs text-[color:var(--muted-foreground)]">Nenhum perfil conectado no Buffer.</div>
-              ) : (
-                <select
-                  value={profileId}
-                  onChange={(e) => setProfileId(e.target.value)}
-                  className="w-full rounded-[4px] border border-[color:var(--divisoria)] bg-white px-3 py-2 text-sm focus:outline-none focus:border-[color:var(--bronze)]"
-                >
-                  {profiles.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.service} · {p.formatted_username || p.service_username || p.id.slice(0, 6)}
-                    </option>
-                  ))}
-                </select>
-              )}
+              <select
+                value={canal}
+                onChange={(e) => setCanal(e.target.value)}
+                className="w-full rounded-[4px] border border-[color:var(--divisoria)] bg-white px-3 py-2 text-sm focus:outline-none focus:border-[color:var(--bronze)]"
+              >
+                {CANAIS.map((c) => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
+              </select>
             </label>
           </div>
         </div>
@@ -178,7 +162,7 @@ export function BufferModal({
             Cancelar
           </button>
           <button
-            disabled={!texto.trim() || !profileId || !iso || mut.isPending}
+            disabled={!texto.trim() || !canal || !iso || mut.isPending}
             onClick={() => mut.mutate()}
             className="inline-flex items-center gap-2 rounded-[4px] bg-[color:var(--graphite)] px-4 py-2 text-sm text-white hover:bg-[color:var(--bronze)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
@@ -191,12 +175,12 @@ export function BufferModal({
   );
 }
 
-export function BufferButton({
+export function AgendarButton({
   text,
   kind,
   origem,
   postId,
-  label = "Agendar no Buffer",
+  label = "Agendar publicação",
   variant = "primary",
   className = "",
 }: {
@@ -226,7 +210,7 @@ export function BufferButton({
         <Send className={variant === "chip" ? "h-3 w-3" : "h-4 w-4"} />
         {label}
       </button>
-      <BufferModal
+      <AgendarModal
         open={open}
         onClose={() => setOpen(false)}
         initialText={text}

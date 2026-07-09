@@ -8,7 +8,7 @@ import { LINHAS, PILARES } from "@/lib/nl-brand";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Copy, RotateCcw, Square, Layers, Play, Briefcase, Mail, Save, Image as ImageIcon, X } from "lucide-react";
 import { BibliotecaPicker, type BibliotecaImagemLite } from "@/components/biblioteca-picker";
-import { BufferButton } from "@/components/buffer-modal";
+import { AgendarButton } from "@/components/agendar-modal";
 import { toast } from "sonner";
 
 type Search = { conteudo?: string };
@@ -371,12 +371,12 @@ function CanalCard({
           <Copy className="h-3 w-3" /> Copiar
         </button>
         {bufferText && (
-          <BufferButton
+          <AgendarButton
             text={bufferText}
             variant="chip"
             origem="kit-publicacao"
             kind={bufferKind}
-            label="Agendar no Buffer"
+            label="Agendar publicação"
           />
         )}
       </div>
