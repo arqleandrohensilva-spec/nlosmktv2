@@ -11,6 +11,7 @@ import {
   gerarNarrativaProjeto,
 } from "@/lib/antes-depois.functions";
 import { signBibliotecaUrls } from "@/components/biblioteca-picker";
+import { BibliotecaPicker, type BibliotecaImagemLite } from "@/components/biblioteca-picker";
 import {
   X,
   Upload,
