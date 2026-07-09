@@ -304,6 +304,12 @@ function MotorCopy() {
               <PrimaryButton disabled={salvar.isPending} onClick={() => salvar.mutate()}>
                 {salvar.isPending ? "Salvando…" : "Salvar no calendário"}
               </PrimaryButton>
+              <BufferButton
+                text={output.copy_legenda}
+                origem="copy"
+                variant="secondary"
+                kind={formato === "reels" ? "projeto" : "posicionamento"}
+              />
               <SecondaryButton
                 onClick={() =>
                   navigate({
