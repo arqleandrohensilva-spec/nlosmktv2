@@ -443,6 +443,115 @@ export type Database = {
         }
         Relationships: []
       }
+      prospeccao_historico: {
+        Row: {
+          created_at: string
+          data_evento: string | null
+          descricao: string
+          id: string
+          prospeccao_id: string | null
+          tipo: string
+        }
+        Insert: {
+          created_at?: string
+          data_evento?: string | null
+          descricao: string
+          id?: string
+          prospeccao_id?: string | null
+          tipo: string
+        }
+        Update: {
+          created_at?: string
+          data_evento?: string | null
+          descricao?: string
+          id?: string
+          prospeccao_id?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospeccao_historico_prospeccao_id_fkey"
+            columns: ["prospeccao_id"]
+            isOneToOne: false
+            referencedRelation: "prospeccoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospeccoes: {
+        Row: {
+          canal_abordagem: string | null
+          cargo: string | null
+          created_at: string
+          data_followup: string | null
+          data_primeiro_contato: string | null
+          email: string | null
+          empresa: string | null
+          id: string
+          instagram: string | null
+          lancamento_id: string | null
+          linha_interesse: string | null
+          mensagem_enviada: string | null
+          nome_contato: string | null
+          notas: string | null
+          origem: string
+          potencial: string | null
+          status: string
+          updated_at: string
+          whatsapp: string | null
+        }
+        Insert: {
+          canal_abordagem?: string | null
+          cargo?: string | null
+          created_at?: string
+          data_followup?: string | null
+          data_primeiro_contato?: string | null
+          email?: string | null
+          empresa?: string | null
+          id?: string
+          instagram?: string | null
+          lancamento_id?: string | null
+          linha_interesse?: string | null
+          mensagem_enviada?: string | null
+          nome_contato?: string | null
+          notas?: string | null
+          origem: string
+          potencial?: string | null
+          status?: string
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          canal_abordagem?: string | null
+          cargo?: string | null
+          created_at?: string
+          data_followup?: string | null
+          data_primeiro_contato?: string | null
+          email?: string | null
+          empresa?: string | null
+          id?: string
+          instagram?: string | null
+          lancamento_id?: string | null
+          linha_interesse?: string | null
+          mensagem_enviada?: string | null
+          nome_contato?: string | null
+          notas?: string | null
+          origem?: string
+          potencial?: string | null
+          status?: string
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospeccoes_lancamento_id_fkey"
+            columns: ["lancamento_id"]
+            isOneToOne: false
+            referencedRelation: "lancamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       radar_buscas: {
         Row: {
           created_at: string

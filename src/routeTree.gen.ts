@@ -13,6 +13,7 @@ import { Route as ValidarRouteImport } from './routes/validar'
 import { Route as ReescreverRouteImport } from './routes/reescrever'
 import { Route as RadarMercadoRouteImport } from './routes/radar-mercado'
 import { Route as RadarRouteImport } from './routes/radar'
+import { Route as ProspeccaoRouteImport } from './routes/prospeccao'
 import { Route as PerformanceRouteImport } from './routes/performance'
 import { Route as ObjecoesRouteImport } from './routes/objecoes'
 import { Route as MarcaRouteImport } from './routes/marca'
@@ -42,6 +43,11 @@ const RadarMercadoRoute = RadarMercadoRouteImport.update({
 const RadarRoute = RadarRouteImport.update({
   id: '/radar',
   path: '/radar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProspeccaoRoute = ProspeccaoRouteImport.update({
+  id: '/prospeccao',
+  path: '/prospeccao',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PerformanceRoute = PerformanceRouteImport.update({
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/marca': typeof MarcaRoute
   '/objecoes': typeof ObjecoesRoute
   '/performance': typeof PerformanceRoute
+  '/prospeccao': typeof ProspeccaoRoute
   '/radar': typeof RadarRoute
   '/radar-mercado': typeof RadarMercadoRoute
   '/reescrever': typeof ReescreverRoute
@@ -122,6 +129,7 @@ export interface FileRoutesByTo {
   '/marca': typeof MarcaRoute
   '/objecoes': typeof ObjecoesRoute
   '/performance': typeof PerformanceRoute
+  '/prospeccao': typeof ProspeccaoRoute
   '/radar': typeof RadarRoute
   '/radar-mercado': typeof RadarMercadoRoute
   '/reescrever': typeof ReescreverRoute
@@ -139,6 +147,7 @@ export interface FileRoutesById {
   '/marca': typeof MarcaRoute
   '/objecoes': typeof ObjecoesRoute
   '/performance': typeof PerformanceRoute
+  '/prospeccao': typeof ProspeccaoRoute
   '/radar': typeof RadarRoute
   '/radar-mercado': typeof RadarMercadoRoute
   '/reescrever': typeof ReescreverRoute
@@ -157,6 +166,7 @@ export interface FileRouteTypes {
     | '/marca'
     | '/objecoes'
     | '/performance'
+    | '/prospeccao'
     | '/radar'
     | '/radar-mercado'
     | '/reescrever'
@@ -173,6 +183,7 @@ export interface FileRouteTypes {
     | '/marca'
     | '/objecoes'
     | '/performance'
+    | '/prospeccao'
     | '/radar'
     | '/radar-mercado'
     | '/reescrever'
@@ -189,6 +200,7 @@ export interface FileRouteTypes {
     | '/marca'
     | '/objecoes'
     | '/performance'
+    | '/prospeccao'
     | '/radar'
     | '/radar-mercado'
     | '/reescrever'
@@ -206,6 +218,7 @@ export interface RootRouteChildren {
   MarcaRoute: typeof MarcaRoute
   ObjecoesRoute: typeof ObjecoesRoute
   PerformanceRoute: typeof PerformanceRoute
+  ProspeccaoRoute: typeof ProspeccaoRoute
   RadarRoute: typeof RadarRoute
   RadarMercadoRoute: typeof RadarMercadoRoute
   ReescreverRoute: typeof ReescreverRoute
@@ -240,6 +253,13 @@ declare module '@tanstack/react-router' {
       path: '/radar'
       fullPath: '/radar'
       preLoaderRoute: typeof RadarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/prospeccao': {
+      id: '/prospeccao'
+      path: '/prospeccao'
+      fullPath: '/prospeccao'
+      preLoaderRoute: typeof ProspeccaoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/performance': {
@@ -326,6 +346,7 @@ const rootRouteChildren: RootRouteChildren = {
   MarcaRoute: MarcaRoute,
   ObjecoesRoute: ObjecoesRoute,
   PerformanceRoute: PerformanceRoute,
+  ProspeccaoRoute: ProspeccaoRoute,
   RadarRoute: RadarRoute,
   RadarMercadoRoute: RadarMercadoRoute,
   ReescreverRoute: ReescreverRoute,

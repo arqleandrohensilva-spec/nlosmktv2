@@ -12,6 +12,8 @@ import {
   Radar,
   ArrowUpRight,
   DollarSign,
+  UserCheck,
+  AlertTriangle,
 } from "lucide-react";
 import { LINHAS } from "@/lib/nl-brand";
 
@@ -61,6 +63,20 @@ function Dashboard() {
     },
   });
 
+  const { data: followupsVencidos } = useQuery({
+    queryKey: ["dashboard-followups-vencidos"],
+    queryFn: async () => {
+      const hoje = new Date().toISOString().slice(0, 10);
+      const { data } = await (supabase as any)
+        .from("prospeccoes")
+        .select("id")
+        .lt("data_followup", hoje)
+        .not("data_followup", "is", null)
+        .not("status", "in", "(parceria_ativa,sem_interesse,arquivado)");
+      return (data ?? []).length as number;
+    },
+  });
+
   return (
     <>
       <PageHeader
@@ -70,6 +86,21 @@ function Dashboard() {
       />
 
       <div className="px-4 md:px-10 py-8 space-y-10">
+        {(followupsVencidos ?? 0) > 0 && (
+          <Link
+            to="/prospeccao"
+            className="flex items-center justify-between gap-3 border border-red-300 bg-red-50 rounded-lg px-4 py-3 hover:bg-red-100 transition-colors"
+          >
+            <div className="flex items-center gap-2 text-red-800 text-sm">
+              <AlertTriangle className="h-4 w-4" />
+              {followupsVencidos} prospecção(ões) aguardando follow-up.
+            </div>
+            <span className="text-xs text-red-700 inline-flex items-center gap-1">
+              Abrir CRM <ArrowUpRight className="h-3 w-3" />
+            </span>
+          </Link>
+        )}
+
         <section className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           <MetricCard label="Posts gerados no mês" value={metrics?.mensal ?? 0} />
           <MetricCard label="Posts publicados" value={metrics?.publicados ?? 0} />
@@ -118,6 +149,7 @@ function Dashboard() {
             <Shortcut to="/performance" icon={BarChart3} title="Performance" desc="Registrar e analisar posts publicados" />
             <Shortcut to="/marca" icon={BookOpen} title="Biblioteca de Marca" desc="Persona, paleta, tom e regras" />
             <Shortcut to="/radar" icon={Radar} title="Radar de Oportunidade" desc="Datas relevantes cruzadas com linhas" />
+            <Shortcut to="/prospeccao" icon={UserCheck} title="CRM · Prospecção" desc="Pipeline de contatos e follow-ups" />
             <Shortcut to="/custos" icon={DollarSign} title="Custos IA" desc="Rastreamento de tokens e custo por operação" />
           </div>
         </section>

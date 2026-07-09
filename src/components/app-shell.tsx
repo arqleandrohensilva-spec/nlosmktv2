@@ -1,5 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useState, useEffect, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard,
   Sparkles,
@@ -19,6 +21,7 @@ import {
   Send,
   Image as ImageIcon,
   MapPin,
+  UserCheck,
 } from "lucide-react";
 
 const NAV = [
@@ -33,6 +36,7 @@ const NAV = [
   { to: "/marca", label: "Biblioteca de Marca", icon: BookOpen },
   { to: "/radar", label: "Radar de Oportunidade", icon: Radar },
   { to: "/radar-mercado", label: "Radar de Mercado", icon: MapPin },
+  { to: "/prospeccao", label: "CRM · Prospecção", icon: UserCheck },
   { to: "/concorrentes", label: "Radar de Concorrentes", icon: Crosshair },
   { to: "/validar", label: "Validar peça", icon: ShieldCheck },
   { to: "/custos", label: "Custos IA", icon: DollarSign },
@@ -44,6 +48,21 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+
+  const { data: followupsVencidos } = useQuery({
+    queryKey: ["sidebar-followups-vencidos"],
+    queryFn: async () => {
+      const hoje = new Date().toISOString().slice(0, 10);
+      const { data } = await (supabase as any)
+        .from("prospeccoes")
+        .select("id")
+        .lt("data_followup", hoje)
+        .not("data_followup", "is", null)
+        .not("status", "in", "(parceria_ativa,sem_interesse,arquivado)");
+      return (data ?? []).length as number;
+    },
+    refetchInterval: 60_000,
+  });
 
   useEffect(() => {
     try {
@@ -75,6 +94,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           pathname={pathname}
           onNavigate={() => {}}
           collapsed={collapsed}
+          badges={{ "/prospeccao": followupsVencidos ?? 0 }}
         />
         <button
           onClick={toggleCollapsed}
@@ -137,11 +157,13 @@ function SidebarInner({
   onNavigate,
   noHeader,
   collapsed,
+  badges,
 }: {
   pathname: string;
   onNavigate: () => void;
   noHeader?: boolean;
   collapsed: boolean;
+  badges?: Record<string, number>;
 }) {
   return (
     <div className="flex flex-1 flex-col">
@@ -165,6 +187,7 @@ function SidebarInner({
           const active =
             item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
           const Icon = item.icon;
+          const badge = badges?.[item.to] ?? 0;
           return (
             <Link
               key={item.to}
@@ -184,6 +207,14 @@ function SidebarInner({
                 <span className="text-[10px] uppercase tracking-[0.4em] font-bold">
                   {item.label}
                 </span>
+              )}
+              {badge > 0 && !collapsed && (
+                <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] flex items-center justify-center font-bold">
+                  {badge}
+                </span>
+              )}
+              {badge > 0 && collapsed && (
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-600" />
               )}
               {collapsed && (
                 <span className="pointer-events-none absolute left-full ml-2 whitespace-nowrap rounded bg-[#0F0F0F] border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.3em] font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity z-50">
