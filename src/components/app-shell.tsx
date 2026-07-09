@@ -18,6 +18,7 @@ import {
   RefreshCw,
   Send,
   Image as ImageIcon,
+  MapPin,
 } from "lucide-react";
 
 const NAV = [
@@ -31,6 +32,7 @@ const NAV = [
   { to: "/performance", label: "Performance", icon: BarChart3 },
   { to: "/marca", label: "Biblioteca de Marca", icon: BookOpen },
   { to: "/radar", label: "Radar de Oportunidade", icon: Radar },
+  { to: "/radar-mercado", label: "Radar de Mercado", icon: MapPin },
   { to: "/concorrentes", label: "Radar de Concorrentes", icon: Crosshair },
   { to: "/validar", label: "Validar peça", icon: ShieldCheck },
   { to: "/custos", label: "Custos IA", icon: DollarSign },
