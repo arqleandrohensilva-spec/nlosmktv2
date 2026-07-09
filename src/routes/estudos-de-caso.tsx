@@ -461,6 +461,32 @@ function EstudosPage() {
             </div>
 
             <div className="border border-[color:var(--divisoria)] rounded-lg bg-white p-6">
+              <div className="mb-3 flex justify-end">
+                {(() => {
+                  const textoAba =
+                    tab === "carrossel"
+                      ? `${conteudos.carrossel.titulo_capa}\n\n` +
+                        conteudos.carrossel.slides.map((s) => `SLIDE ${s.numero} — ${s.titulo}\n${s.texto}`).join("\n\n")
+                      : tab === "reels"
+                      ? conteudos.roteiro_reels
+                      : tab === "blog"
+                      ? conteudos.blog
+                      : tab === "email"
+                      ? conteudos.email
+                      : conteudos.linkedin;
+                  const kind: "posicionamento" | "projeto" | "bastidor" =
+                    tab === "linkedin" ? "posicionamento" : tab === "reels" || tab === "carrossel" ? "projeto" : "projeto";
+                  return (
+                    <BufferButton
+                      text={textoAba}
+                      variant="chip"
+                      origem={`estudos-caso:${tab}`}
+                      kind={kind}
+                      label="Agendar no Buffer"
+                    />
+                  );
+                })()}
+              </div>
               {tab === "carrossel" && (
                 <div className="space-y-3">
                   <div className="flex justify-between items-center mb-2">
