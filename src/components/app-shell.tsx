@@ -228,6 +228,30 @@ function SidebarInner({
         })}
       </nav>
       <div className={`border-t border-white/5 ${collapsed ? "px-2 py-4 flex justify-center" : "px-5 py-4"}`}>
+        <Link
+          to="/configuracoes"
+          onClick={onNavigate}
+          title={collapsed ? "Configurações" : undefined}
+          className={`group relative flex items-center gap-3 border-l-2 transition-colors mb-3 ${
+            collapsed ? "justify-center px-0 py-2" : "px-2 py-2"
+          } ${
+            pathname.startsWith("/configuracoes")
+              ? "border-[#8B7355] bg-[#8B7355]/15 text-white"
+              : "border-transparent text-white/70 hover:bg-white/10 hover:text-white"
+          }`}
+        >
+          <Settings className="h-4 w-4" strokeWidth={1.5} />
+          {!collapsed && (
+            <span className="text-[10px] uppercase tracking-[0.4em] font-bold">
+              Configurações
+            </span>
+          )}
+          {collapsed && (
+            <span className="pointer-events-none absolute left-full ml-2 whitespace-nowrap rounded bg-[#0F0F0F] border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.3em] font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity z-50">
+              Configurações
+            </span>
+          )}
+        </Link>
         <div className={`flex items-center gap-3 ${collapsed ? "justify-center" : ""}`}>
           <div
             className="flex items-center justify-center border border-[#8B7355]/40 text-[#8B7355] shrink-0"
