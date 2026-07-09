@@ -166,11 +166,10 @@ function RadarMercadoPage() {
   });
 
   const manualMut = useMutation({
-    mutationFn: async (input: { nome: string; informacoes_brutas: string; tipo: string; cidade: string }) => {
+    mutationFn: async (input: { nome: string }) => {
       setManualStage("pesquisando");
-      // Encenar estágios visuais durante a chamada
       const timers: ReturnType<typeof setTimeout>[] = [];
-      timers.push(setTimeout(() => setManualStage("consolidando"), 4000));
+      timers.push(setTimeout(() => setManualStage("identificando"), 4000));
       timers.push(setTimeout(() => setManualStage("criando"), 9000));
       try {
         const row = await adicionar({ data: input });
