@@ -77,7 +77,7 @@ export const validarPeca = createServerFn({ method: "POST" })
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
-        max_tokens: 1200,
+        max_tokens: 2000,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: data.texto }],
       }),

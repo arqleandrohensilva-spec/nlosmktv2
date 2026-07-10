@@ -236,7 +236,7 @@ export const gerarConteudosLancamento = createServerFn({ method: "POST" })
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
-        max_tokens: 3000,
+        max_tokens: 4000,
         system: SYSTEM_PROMPT_CONTEUDO,
         messages: [{ role: "user", content: userPrompt }],
       }),
@@ -339,7 +339,7 @@ export const adicionarManual = createServerFn({ method: "POST" })
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
-        max_tokens: 3000,
+        max_tokens: 4000,
         tools: [{ type: "web_search_20250305", name: "web_search" }],
         system: SYSTEM_PROMPT_MANUAL,
         messages: [{ role: "user", content: userPrompt }],
