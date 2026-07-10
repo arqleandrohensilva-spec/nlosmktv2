@@ -21,7 +21,7 @@ function Performance() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("posts")
-        .select("id, linha, formato, data_publicacao, created_at, performance(views, curtidas, comentarios, salvamentos, compartilhamentos)")
+        .select("id, linha, formato, dor_id, data_publicacao, created_at, dores(titulo), performance(views, curtidas, comentarios, salvamentos, compartilhamentos)")
         .eq("status", "publicado")
         .order("data_publicacao", { ascending: false });
       if (error) throw error;
@@ -61,6 +61,21 @@ function Performance() {
       label: l.label.split(" — ")[1],
       media: map[l.value] ? Math.round(map[l.value].total / map[l.value].count) : 0,
     })).sort((a, b) => b.media - a.media);
+  }, [rows]);
+
+  const rankingDores = useMemo(() => {
+    const map: Record<string, { total: number; count: number; titulo: string }> = {};
+    (rows ?? []).forEach((p: any) => {
+      const perf = p.performance?.[0];
+      if (!perf || !p.dor_id || !p.dores?.titulo) return;
+      const eng = (perf.curtidas ?? 0) + (perf.comentarios ?? 0) + (perf.salvamentos ?? 0);
+      map[p.dor_id] ??= { total: 0, count: 0, titulo: p.dores.titulo };
+      map[p.dor_id].total += eng;
+      map[p.dor_id].count += 1;
+    });
+    return Object.entries(map)
+      .map(([id, v]) => ({ id, titulo: v.titulo, media: Math.round(v.total / v.count) }))
+      .sort((a, b) => b.media - a.media);
   }, [rows]);
 
   const alertaCampeao = useMemo(() => {
@@ -123,6 +138,20 @@ function Performance() {
           </RankingCard>
         </section>
 
+        <section>
+          <RankingCard title="Dores por engajamento médio">
+            {rankingDores.length === 0 ? (
+              <div className="text-sm text-[color:var(--muted-foreground)]">
+                Registre performance de posts publicados para ver quais dores geram mais engajamento.
+              </div>
+            ) : (
+              rankingDores.map((r, i) => (
+                <RankRow key={r.id} rank={i + 1} label={r.titulo} value={r.media} />
+              ))
+            )}
+          </RankingCard>
+        </section>
+
         <section className="border border-[color:var(--divisoria)] rounded-lg bg-white p-5">
           <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)] mb-4">
             EVOLUÇÃO DE VIEWS POR SEMANA
@@ -148,13 +177,18 @@ function Performance() {
             <table className="w-full text-sm bg-white">
               <thead className="bg-[color:var(--gelo)]">
                 <tr>
-                  <Th>Data</Th><Th>Linha</Th><Th>Formato</Th><Th>Views</Th><Th>Engajamento</Th>
+                  <Th>Data</Th><Th>Linha</Th><Th>Dor</Th><Th>Formato</Th><Th>Views</Th><Th>Engajamento</Th>
                 </tr>
               </thead>
               <tbody>
                 {(rows ?? []).map((p: any) => {
                   const perf = p.performance?.[0];
                   const eng = perf ? (perf.curtidas ?? 0) + (perf.comentarios ?? 0) + (perf.salvamentos ?? 0) : 0;
+                  const dorTitulo = p.dores?.titulo
+                    ? p.dores.titulo.length > 20
+                      ? `${p.dores.titulo.slice(0, 20)}…`
+                      : p.dores.titulo
+                    : "—";
                   return (
                     <tr key={p.id} className="border-t border-[color:var(--divisoria)]">
                       <Td className="font-mono text-xs">{p.data_publicacao ?? "—"}</Td>
@@ -163,6 +197,7 @@ function Performance() {
                           {p.linha}
                         </span>
                       </Td>
+                      <Td className="text-xs" >{dorTitulo}</Td>
                       <Td>{FORMATOS.find((f) => f.value === p.formato)?.label}</Td>
                       <Td className="font-mono">{perf?.views ?? "—"}</Td>
                       <Td className="font-mono">{perf ? eng : "—"}</Td>
@@ -170,7 +205,7 @@ function Performance() {
                   );
                 })}
                 {rows?.length === 0 && (
-                  <tr><Td colSpan={5} className="text-center py-8 text-[color:var(--muted-foreground)]">Nenhum post publicado ainda.</Td></tr>
+                  <tr><Td colSpan={6} className="text-center py-8 text-[color:var(--muted-foreground)]">Nenhum post publicado ainda.</Td></tr>
                 )}
               </tbody>
             </table>
