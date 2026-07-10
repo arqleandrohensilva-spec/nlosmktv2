@@ -81,8 +81,8 @@ function MotorCopy() {
       else if (m === undefined && !d.ultima_vez_usada) { tier = "nunca"; sufixo = " · (nunca usada)"; }
       return { ...d, tier, sufixo, media: m };
     });
-    const rank = { top: 0, meio: 1, nunca: 2 } as const;
-    arr.sort((a, b) => rank[a.tier] - rank[b.tier] || a.titulo.localeCompare(b.titulo));
+    const rank: Record<string, number> = { top: 0, meio: 1, nunca: 2 };
+    arr.sort((a: any, b: any) => rank[a.tier] - rank[b.tier] || a.titulo.localeCompare(b.titulo));
     return arr;
   }, [dores, perfPorDor]);
 
