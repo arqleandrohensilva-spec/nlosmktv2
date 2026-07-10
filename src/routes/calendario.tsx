@@ -55,6 +55,35 @@ function Calendario() {
     return alerts;
   }, [posts]);
 
+  const semanas = useMemo(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const today = now.getDate();
+    const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    const ranges = [
+      { n: 1, start: 1, end: 7 },
+      { n: 2, start: 8, end: 14 },
+      { n: 3, start: 15, end: 21 },
+      { n: 4, start: 22, end: lastDay },
+    ];
+    return ranges.map((r) => {
+      const postsSemana = (posts ?? []).filter((p: any) => {
+        const d = new Date(p.created_at);
+        if (d.getFullYear() !== year || d.getMonth() !== month) return false;
+        const dia = d.getDate();
+        return dia >= r.start && dia <= r.end;
+      });
+      const prontos = postsSemana.filter((p: any) => p.status === "pronto").length;
+      const publicados = postsSemana.filter((p: any) => p.status === "publicado").length;
+      const rascunhos = postsSemana.filter((p: any) => p.status === "rascunho").length;
+      const atual = today >= r.start && today <= r.end;
+      const label = `${String(r.start).padStart(2, "0")}-${String(r.end).padStart(2, "0")}/${meses[month]}`;
+      return { ...r, postsSemana, prontos, publicados, rascunhos, atual, label };
+    });
+  }, [posts]);
+
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const patch: any = { status };
@@ -86,6 +115,58 @@ function Calendario() {
       />
 
       <div className="px-4 md:px-10 py-8">
+        <div className="mb-8">
+          <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)] mb-3">
+            VISÃO SEMANAL
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {semanas.map((s) => {
+              const vazia = s.postsSemana.length === 0;
+              return (
+                <div
+                  key={s.n}
+                  className={`border rounded-lg p-3 ${
+                    vazia
+                      ? "border-dashed border-[color:var(--divisoria)]"
+                      : "border-[color:var(--divisoria)]"
+                  } ${s.atual ? "bg-[color:var(--bege)]" : "bg-white"}`}
+                >
+                  <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)]">
+                    SEMANA {s.n} · {s.label}
+                  </div>
+                  {vazia ? (
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className="text-xs text-[color:var(--muted-foreground)]">Sem posts</span>
+                      <Link
+                        to="/copy"
+                        className="inline-flex items-center justify-center h-6 w-6 rounded-[4px] border border-[color:var(--divisoria)] hover:border-[color:var(--bronze)] text-[color:var(--graphite)]"
+                        aria-label="Novo post"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="mt-3 flex items-center gap-3 text-xs text-[color:var(--graphite)]">
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-[color:var(--bronze)]" />
+                        {s.prontos}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-emerald-600" />
+                        {s.publicados}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-[color:var(--divisoria)]" />
+                        {s.rascunhos}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         {lacunas.length > 0 && (
           <div className="mb-6 border border-[color:var(--bronze)] bg-[color:var(--bege)] rounded-lg p-4">
             <div className="flex items-start gap-3">
@@ -121,6 +202,10 @@ function Calendario() {
             </Link>
           </div>
         ) : (
+          <>
+          <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)] mb-3">
+            TODOS OS POSTS
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {(posts ?? []).map((p: any) => (
               <button
@@ -150,6 +235,7 @@ function Calendario() {
               </button>
             ))}
           </div>
+          </>
         )}
       </div>
 
