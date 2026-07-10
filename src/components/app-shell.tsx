@@ -25,24 +25,49 @@ import {
   Settings,
 } from "lucide-react";
 
-const NAV = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/copy", label: "Motor de Copy IA", icon: Sparkles },
-  { to: "/reescrever", label: "Reescritor", icon: RefreshCw },
-  { to: "/kit-publicacao", label: "Kit de Publicação", icon: Send },
-  { to: "/estudos-de-caso", label: "Estudos de Caso", icon: BookOpen },
-  { to: "/biblioteca", label: "Biblioteca Visual", icon: ImageIcon },
-  { to: "/calendario", label: "Calendário Editorial", icon: Calendar },
-  { to: "/objecoes", label: "Banco de Objeções", icon: Shield },
-  { to: "/performance", label: "Performance", icon: BarChart3 },
-  { to: "/marca", label: "Biblioteca de Marca", icon: BookOpen },
-  { to: "/radar", label: "Radar de Oportunidade", icon: Radar },
-  { to: "/radar-mercado", label: "Radar de Mercado", icon: MapPin },
-  { to: "/prospeccao", label: "CRM · Prospecção", icon: UserCheck },
-  { to: "/concorrentes", label: "Radar de Concorrentes", icon: Crosshair },
-  { to: "/validar", label: "Validar peça", icon: ShieldCheck },
+type NavItem = { to: string; label: string; icon: typeof LayoutDashboard };
+
+const NAV_GROUPS: { label: string | null; items: NavItem[] }[] = [
+  {
+    label: null,
+    items: [
+      { to: "/", label: "Dashboard", icon: LayoutDashboard },
+      { to: "/copy", label: "Motor de Copy IA", icon: Sparkles },
+      { to: "/reescrever", label: "Reescritor", icon: RefreshCw },
+      { to: "/kit-publicacao", label: "Kit de Publicação", icon: Send },
+      { to: "/estudos-de-caso", label: "Estudos de Caso", icon: BookOpen },
+    ],
+  },
+  {
+    label: "GESTÃO",
+    items: [
+      { to: "/calendario", label: "Calendário Editorial", icon: Calendar },
+      { to: "/performance", label: "Performance", icon: BarChart3 },
+      { to: "/objecoes", label: "Banco de Objeções", icon: Shield },
+    ],
+  },
+  {
+    label: "INTELIGÊNCIA",
+    items: [
+      { to: "/biblioteca", label: "Biblioteca Visual", icon: ImageIcon },
+      { to: "/concorrentes", label: "Radar de Concorrentes", icon: Crosshair },
+      { to: "/radar-mercado", label: "Radar de Mercado", icon: MapPin },
+      { to: "/radar", label: "Radar de Oportunidade", icon: Radar },
+      { to: "/validar", label: "Validar Peça", icon: ShieldCheck },
+    ],
+  },
+  {
+    label: "PROSPECÇÃO",
+    items: [
+      { to: "/prospeccao", label: "CRM · Prospecção", icon: UserCheck },
+    ],
+  },
+];
+
+const FOOTER_ITEMS: NavItem[] = [
   { to: "/custos", label: "Custos IA", icon: DollarSign },
-] as const;
+  { to: "/configuracoes", label: "Configurações", icon: Settings },
+];
 
 const STORAGE_KEY = "nl_mkt_sidebar_collapsed";
 
@@ -185,74 +210,42 @@ function SidebarInner({
         </div>
       )}
       <nav className="flex-1 py-4 overflow-y-auto">
-        {NAV.map((item) => {
-          const active =
-            item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
-          const Icon = item.icon;
-          const badge = badges?.[item.to] ?? 0;
-          return (
-            <Link
-              key={item.to}
-              to={item.to}
-              onClick={onNavigate}
-              title={collapsed ? item.label : undefined}
-              className={`group relative flex items-center gap-3 border-l-2 transition-colors ${
-                collapsed ? "justify-center px-0 py-3" : "px-5 py-3"
-              } ${
-                active
-                  ? "border-[#8B7355] bg-[#8B7355]/15 text-white"
-                  : "border-transparent text-white/70 hover:bg-white/10 hover:text-white"
-              }`}
-            >
-              <Icon className="h-4 w-4" strokeWidth={1.5} />
-              {!collapsed && (
-                <span className="text-[10px] uppercase tracking-[0.4em] font-bold">
-                  {item.label}
-                </span>
-              )}
-              {badge > 0 && !collapsed && (
-                <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] flex items-center justify-center font-bold">
-                  {badge}
-                </span>
-              )}
-              {badge > 0 && collapsed && (
-                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-600" />
-              )}
-              {collapsed && (
-                <span className="pointer-events-none absolute left-full ml-2 whitespace-nowrap rounded bg-[#0F0F0F] border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.3em] font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity z-50">
-                  {item.label}
-                </span>
-              )}
-            </Link>
-          );
-        })}
+        {NAV_GROUPS.map((group, gi) => (
+          <div key={group.label ?? `g-${gi}`}>
+            {gi > 0 && <div className="border-t border-white/5 mx-3 my-2" />}
+            {group.label && !collapsed && (
+              <div className="font-mono text-[9px] tracking-[0.15em] uppercase text-white/30 px-3 mt-4 mb-1">
+                {group.label}
+              </div>
+            )}
+            {group.items.map((item) => (
+              <NavLink
+                key={item.to}
+                item={item}
+                pathname={pathname}
+                collapsed={collapsed}
+                onNavigate={onNavigate}
+                badge={badges?.[item.to] ?? 0}
+              />
+            ))}
+          </div>
+        ))}
       </nav>
-      <div className={`border-t border-white/5 ${collapsed ? "px-2 py-4 flex justify-center" : "px-5 py-4"}`}>
-        <Link
-          to="/configuracoes"
-          onClick={onNavigate}
-          title={collapsed ? "Configurações" : undefined}
-          className={`group relative flex items-center gap-3 border-l-2 transition-colors mb-3 ${
-            collapsed ? "justify-center px-0 py-2" : "px-2 py-2"
-          } ${
-            pathname.startsWith("/configuracoes")
-              ? "border-[#8B7355] bg-[#8B7355]/15 text-white"
-              : "border-transparent text-white/70 hover:bg-white/10 hover:text-white"
-          }`}
-        >
-          <Settings className="h-4 w-4" strokeWidth={1.5} />
-          {!collapsed && (
-            <span className="text-[10px] uppercase tracking-[0.4em] font-bold">
-              Configurações
-            </span>
-          )}
-          {collapsed && (
-            <span className="pointer-events-none absolute left-full ml-2 whitespace-nowrap rounded bg-[#0F0F0F] border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.3em] font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity z-50">
-              Configurações
-            </span>
-          )}
-        </Link>
-        <div className={`flex items-center gap-3 ${collapsed ? "justify-center" : ""}`}>
+      <div className={`border-t border-white/5 ${collapsed ? "px-2 py-4" : "px-2 py-4"}`}>
+        <div className="mb-3">
+          {FOOTER_ITEMS.map((item) => (
+            <NavLink
+              key={item.to}
+              item={item}
+              pathname={pathname}
+              collapsed={collapsed}
+              onNavigate={onNavigate}
+              badge={0}
+              dense
+            />
+          ))}
+        </div>
+        <div className={`flex items-center gap-3 px-3 ${collapsed ? "justify-center px-0" : ""}`}>
           <div
             className="flex items-center justify-center border border-[#8B7355]/40 text-[#8B7355] shrink-0"
             style={{ width: 36, height: 36, fontFamily: "Georgia, serif", fontSize: 12, fontWeight: 600 }}
@@ -268,5 +261,57 @@ function SidebarInner({
         </div>
       </div>
     </div>
+  );
+}
+
+function NavLink({
+  item,
+  pathname,
+  collapsed,
+  onNavigate,
+  badge,
+  dense,
+}: {
+  item: NavItem;
+  pathname: string;
+  collapsed: boolean;
+  onNavigate: () => void;
+  badge: number;
+  dense?: boolean;
+}) {
+  const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
+  const Icon = item.icon;
+  const padY = dense ? "py-2" : "py-3";
+  return (
+    <Link
+      to={item.to}
+      onClick={onNavigate}
+      title={collapsed ? item.label : undefined}
+      className={`group relative flex items-center gap-3 border-l-2 transition-colors ${
+        collapsed ? `justify-center px-0 ${padY}` : `px-5 ${padY}`
+      } ${
+        active
+          ? "border-[#8B7355] bg-[#8B7355]/15 text-white"
+          : "border-transparent text-white/70 hover:bg-white/10 hover:text-white"
+      }`}
+    >
+      <Icon className="h-4 w-4" strokeWidth={1.5} />
+      {!collapsed && (
+        <span className="text-[10px] uppercase tracking-[0.4em] font-bold">{item.label}</span>
+      )}
+      {badge > 0 && !collapsed && (
+        <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] flex items-center justify-center font-bold">
+          {badge}
+        </span>
+      )}
+      {badge > 0 && collapsed && (
+        <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-600" />
+      )}
+      {collapsed && (
+        <span className="pointer-events-none absolute left-full ml-2 whitespace-nowrap rounded bg-[#0F0F0F] border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.3em] font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity z-50">
+          {item.label}
+        </span>
+      )}
+    </Link>
   );
 }
