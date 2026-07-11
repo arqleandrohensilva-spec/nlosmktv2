@@ -4,10 +4,13 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
+  useNavigate,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { supabaseExternal } from "@/lib/supabaseExternal";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -138,10 +141,54 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AppShell>
-        <Outlet />
-      </AppShell>
+      <AuthGate>
+        <AppShell>
+          <Outlet />
+        </AppShell>
+      </AuthGate>
       <Toaster position="top-right" richColors closeButton />
     </QueryClientProvider>
   );
+}
+
+const PUBLIC_ROUTES = new Set(["/login", "/auth/callback", "/redefinir-senha"]);
+
+function AuthGate({ children }: { children: ReactNode }) {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
+  const [status, setStatus] = useState<"loading" | "in" | "out">("loading");
+
+  useEffect(() => {
+    let mounted = true;
+    supabaseExternal.auth.getSession().then(({ data }) => {
+      if (!mounted) return;
+      setStatus(data.session ? "in" : "out");
+    });
+    const { data: sub } = supabaseExternal.auth.onAuthStateChange((_event, session) => {
+      setStatus(session ? "in" : "out");
+    });
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
+  const isPublic = PUBLIC_ROUTES.has(pathname);
+
+  useEffect(() => {
+    if (status === "out" && !isPublic) {
+      navigate({ to: "/login", replace: true });
+    }
+  }, [status, isPublic, navigate]);
+
+  if (isPublic) return <>{children}</>;
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#E8E4DF" }}>
+        <div className="font-mono text-xs tracking-widest text-[#8B7355]">Carregando…</div>
+      </div>
+    );
+  }
+  if (status === "out") return null;
+  return <>{children}</>;
 }

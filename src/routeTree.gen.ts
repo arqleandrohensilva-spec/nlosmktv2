@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ValidarRouteImport } from './routes/validar'
 import { Route as ReescreverRouteImport } from './routes/reescrever'
+import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
 import { Route as RadarMercadoRouteImport } from './routes/radar-mercado'
 import { Route as RadarRouteImport } from './routes/radar'
 import { Route as ProspeccaoRouteImport } from './routes/prospeccao'
@@ -37,6 +38,11 @@ const ValidarRoute = ValidarRouteImport.update({
 const ReescreverRoute = ReescreverRouteImport.update({
   id: '/reescrever',
   path: '/reescrever',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
+  id: '/redefinir-senha',
+  path: '/redefinir-senha',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RadarMercadoRoute = RadarMercadoRouteImport.update({
@@ -142,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/prospeccao': typeof ProspeccaoRoute
   '/radar': typeof RadarRoute
   '/radar-mercado': typeof RadarMercadoRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/reescrever': typeof ReescreverRoute
   '/validar': typeof ValidarRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -163,6 +170,7 @@ export interface FileRoutesByTo {
   '/prospeccao': typeof ProspeccaoRoute
   '/radar': typeof RadarRoute
   '/radar-mercado': typeof RadarMercadoRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/reescrever': typeof ReescreverRoute
   '/validar': typeof ValidarRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -185,6 +193,7 @@ export interface FileRoutesById {
   '/prospeccao': typeof ProspeccaoRoute
   '/radar': typeof RadarRoute
   '/radar-mercado': typeof RadarMercadoRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/reescrever': typeof ReescreverRoute
   '/validar': typeof ValidarRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -208,6 +217,7 @@ export interface FileRouteTypes {
     | '/prospeccao'
     | '/radar'
     | '/radar-mercado'
+    | '/redefinir-senha'
     | '/reescrever'
     | '/validar'
     | '/auth/callback'
@@ -229,6 +239,7 @@ export interface FileRouteTypes {
     | '/prospeccao'
     | '/radar'
     | '/radar-mercado'
+    | '/redefinir-senha'
     | '/reescrever'
     | '/validar'
     | '/auth/callback'
@@ -250,6 +261,7 @@ export interface FileRouteTypes {
     | '/prospeccao'
     | '/radar'
     | '/radar-mercado'
+    | '/redefinir-senha'
     | '/reescrever'
     | '/validar'
     | '/auth/callback'
@@ -272,6 +284,7 @@ export interface RootRouteChildren {
   ProspeccaoRoute: typeof ProspeccaoRoute
   RadarRoute: typeof RadarRoute
   RadarMercadoRoute: typeof RadarMercadoRoute
+  RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   ReescreverRoute: typeof ReescreverRoute
   ValidarRoute: typeof ValidarRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
@@ -291,6 +304,13 @@ declare module '@tanstack/react-router' {
       path: '/reescrever'
       fullPath: '/reescrever'
       preLoaderRoute: typeof ReescreverRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/redefinir-senha': {
+      id: '/redefinir-senha'
+      path: '/redefinir-senha'
+      fullPath: '/redefinir-senha'
+      preLoaderRoute: typeof RedefinirSenhaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/radar-mercado': {
@@ -432,6 +452,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProspeccaoRoute: ProspeccaoRoute,
   RadarRoute: RadarRoute,
   RadarMercadoRoute: RadarMercadoRoute,
+  RedefinirSenhaRoute: RedefinirSenhaRoute,
   ReescreverRoute: ReescreverRoute,
   ValidarRoute: ValidarRoute,
   AuthCallbackRoute: AuthCallbackRoute,
