@@ -63,10 +63,11 @@
   --color-travertino: var(--travertino);
   --color-divisoria: var(--divisoria);
   --color-graphite: var(--graphite);
-  --font-serif: Georgia, "Times New Roman", serif;
+  --font-serif: "Cormorant Garamond", Georgia, serif;
   --font-sans: "DM Mono", ui-monospace, monospace;
   --font-mono: "DM Mono", ui-monospace, monospace;
   --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-cormorant: "Cormorant Garamond", Georgia, serif;
 }
 
 :root {
@@ -132,6 +133,7 @@
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-serif);
+    font-weight: 700;
     color: var(--graphite);
   }
 
