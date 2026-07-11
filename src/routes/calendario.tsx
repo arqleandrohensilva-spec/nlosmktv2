@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseExternal";
 import { PageHeader } from "@/components/page-header";
 import { LINHAS, FORMATOS, STATUS, LINHA_BADGE } from "@/lib/nl-brand";
 import { useState, useMemo } from "react";
@@ -21,7 +21,7 @@ function Calendario() {
   const { data: posts } = useQuery({
     queryKey: ["posts", filterLinha, filterStatus],
     queryFn: async () => {
-      let q = supabase.from("posts").select("*, dores(titulo)").order("created_at", { ascending: false });
+      let q = supabase.from("mkt_posts").select("*, dores(titulo)").order("created_at", { ascending: false });
       if (filterLinha) q = q.eq("linha", filterLinha);
       if (filterStatus) q = q.eq("status", filterStatus);
       const { data, error } = await q;
@@ -88,7 +88,7 @@ function Calendario() {
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const patch: any = { status };
       if (status === "publicado") patch.data_publicacao = new Date().toISOString().slice(0, 10);
-      const { error } = await supabase.from("posts").update(patch).eq("id", id);
+      const { error } = await supabase.from("mkt_posts").update(patch).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {

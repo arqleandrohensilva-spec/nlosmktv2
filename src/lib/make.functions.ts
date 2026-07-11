@@ -7,8 +7,8 @@ const CONFIG_KEY = "make_webhook_url";
 
 function serverClient() {
   return createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_PUBLISHABLE_KEY!,
+    "https://krzuroijejfozljhchok.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyenVyb2lqZWpmb3psamhjaG9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5Mjg4MjEsImV4cCI6MjA5MzUwNDgyMX0.mFMFfY8TdviFVzHvfKYUrZENpcT4wdyW-52-CUNqsOo",
     { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
   );
 }
@@ -16,7 +16,7 @@ function serverClient() {
 async function readWebhookUrl(): Promise<string | null> {
   try {
     const { data } = await serverClient()
-      .from("configuracoes")
+      .from("mkt_configuracoes")
       .select("valor")
       .eq("chave", CONFIG_KEY)
       .maybeSingle();
@@ -44,19 +44,19 @@ export const salvarWebhookMake = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const s = serverClient();
     const { data: existente } = await s
-      .from("configuracoes")
+      .from("mkt_configuracoes")
       .select("id")
       .eq("chave", CONFIG_KEY)
       .maybeSingle();
     if (existente?.id) {
       const { error } = await s
-        .from("configuracoes")
+        .from("mkt_configuracoes")
         .update({ valor: data.url, updated_at: new Date().toISOString() })
         .eq("id", existente.id);
       if (error) throw new Error(error.message);
     } else {
       const { error } = await s
-        .from("configuracoes")
+        .from("mkt_configuracoes")
         .insert({ chave: CONFIG_KEY, valor: data.url });
       if (error) throw new Error(error.message);
     }
@@ -146,7 +146,7 @@ export const agendarViaWebhook = createServerFn({ method: "POST" })
     if (data.post_id) {
       try {
         await serverClient()
-          .from("posts")
+          .from("mkt_posts")
           .update({ status: "agendado" })
           .eq("id", data.post_id);
       } catch {}

@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseExternal";
 import { PageHeader } from "@/components/page-header";
 import { reescreverMensagemProspeccao } from "@/lib/prospeccao.functions";
 import {
@@ -96,7 +96,7 @@ function ProspeccaoPage() {
     queryKey: ["prospeccoes"],
     queryFn: async () => {
       const { data, error } = await db
-        .from("prospeccoes")
+        .from("mkt_prospeccoes")
         .select("*")
         .order("updated_at", { ascending: false });
       if (error) throw error;
@@ -108,7 +108,7 @@ function ProspeccaoPage() {
     queryKey: ["lancamentos-prospeccao"],
     queryFn: async () => {
       const { data } = await db
-        .from("lancamentos")
+        .from("mkt_lancamentos")
         .select("id, nome, cidade, tipo")
         .order("created_at", { ascending: false });
       return (data ?? []) as Lancamento[];
@@ -117,7 +117,7 @@ function ProspeccaoPage() {
 
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await db.from("prospeccoes").update({ status }).eq("id", id);
+      const { error } = await db.from("mkt_prospeccoes").update({ status }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["prospeccoes"] }),
@@ -243,7 +243,7 @@ function ProspeccaoPage() {
           onClose={() => setAberto(null)}
           onChanged={async () => {
             await qc.invalidateQueries({ queryKey: ["prospeccoes"] });
-            const { data } = await db.from("prospeccoes").select("*").eq("id", aberto.id).maybeSingle();
+            const { data } = await db.from("mkt_prospeccoes").select("*").eq("id", aberto.id).maybeSingle();
             if (data) setAberto(data as Prospeccao);
           }}
         />
@@ -256,7 +256,7 @@ function ProspeccaoPage() {
           onCreated={async (id) => {
             setNovaOpen(false);
             await qc.invalidateQueries({ queryKey: ["prospeccoes"] });
-            const { data } = await db.from("prospeccoes").select("*").eq("id", id).maybeSingle();
+            const { data } = await db.from("mkt_prospeccoes").select("*").eq("id", id).maybeSingle();
             if (data) setAberto(data as Prospeccao);
           }}
         />
@@ -364,7 +364,7 @@ function ProspeccaoDrawer({
     queryKey: ["historico", p.id],
     queryFn: async () => {
       const { data } = await db
-        .from("prospeccao_historico")
+        .from("mkt_prospeccao_historico")
         .select("*")
         .eq("prospeccao_id", p.id)
         .order("created_at", { ascending: false });
@@ -375,7 +375,7 @@ function ProspeccaoDrawer({
   const lanc = lancamentos.find((l) => l.id === p.lancamento_id);
 
   async function patch(fields: Partial<Prospeccao>) {
-    const { error } = await db.from("prospeccoes").update(fields).eq("id", p.id);
+    const { error } = await db.from("mkt_prospeccoes").update(fields).eq("id", p.id);
     if (error) {
       toast.error(error.message);
       return;
@@ -386,7 +386,7 @@ function ProspeccaoDrawer({
 
   async function addHistorico(tipo: string, descricao: string, data_evento?: string | null) {
     const { error } = await db
-      .from("prospeccao_historico")
+      .from("mkt_prospeccao_historico")
       .insert({ prospeccao_id: p.id, tipo, descricao, data_evento: data_evento ?? hoje() });
     if (error) {
       toast.error(error.message);
@@ -845,7 +845,7 @@ export function NovaProspeccaoModal({
     }
     setSaving(true);
     const { data, error } = await db
-      .from("prospeccoes")
+      .from("mkt_prospeccoes")
       .insert(f)
       .select("id")
       .single();

@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useState, useEffect, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseExternal";
 import {
   LayoutDashboard,
   Sparkles,
@@ -81,7 +81,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     queryFn: async () => {
       const hoje = new Date().toISOString().slice(0, 10);
       const { data } = await (supabase as any)
-        .from("prospeccoes")
+        .from("mkt_prospeccoes")
         .select("id")
         .lt("data_followup", hoje)
         .not("data_followup", "is", null)

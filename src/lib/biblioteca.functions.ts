@@ -91,8 +91,8 @@ Responda EXCLUSIVAMENTE com JSON puro, sem markdown, começando com { e terminan
 
 function serverSb() {
   return createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_PUBLISHABLE_KEY!,
+    "https://krzuroijejfozljhchok.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyenVyb2lqZWpmb3psamhjaG9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5Mjg4MjEsImV4cCI6MjA5MzUwNDgyMX0.mFMFfY8TdviFVzHvfKYUrZENpcT4wdyW-52-CUNqsOo",
     { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
   );
 }
@@ -212,7 +212,7 @@ export const analisarImagem = createServerFn({ method: "POST" })
 
     const sb = serverSb();
     const { data: row, error } = await sb
-      .from("biblioteca_imagens")
+      .from("mkt_biblioteca_imagens")
       .insert({
         projeto_id: data.projeto_id ?? null,
         nome_arquivo: data.nome_arquivo,
@@ -251,7 +251,7 @@ export const regenerarConteudos = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const sb = serverSb();
     const { data: row, error } = await sb
-      .from("biblioteca_imagens")
+      .from("mkt_biblioteca_imagens")
       .select("*")
       .eq("id", data.id)
       .single();
@@ -259,7 +259,7 @@ export const regenerarConteudos = createServerFn({ method: "POST" })
 
     // baixar do storage para reanalisar
     const { data: file, error: dlErr } = await sb.storage
-      .from("biblioteca-visual")
+      .from("mkt-biblioteca-visual")
       .download(row.url_storage);
     if (dlErr || !file) throw new Error("Falha ao baixar imagem do storage.");
 
@@ -278,7 +278,7 @@ export const regenerarConteudos = createServerFn({ method: "POST" })
     );
 
     const { data: updated, error: upErr } = await sb
-      .from("biblioteca_imagens")
+      .from("mkt_biblioteca_imagens")
       .update({
         descricao_tecnica: analise.descricao_tecnica,
         tags: analise.tags ?? [],

@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseExternal";
 import { PageHeader } from "@/components/page-header";
 import {
   atualizarLancamento,
@@ -118,7 +118,7 @@ function RadarMercadoPage() {
     queryKey: ["lancamentos"],
     queryFn: async () => {
       const { data, error } = await (supabase as never as { from: (t: string) => { select: (s: string) => { order: (c: string, o: { ascending: boolean }) => Promise<{ data: Lancamento[] | null; error: Error | null }> } } })
-        .from("lancamentos")
+        .from("mkt_lancamentos")
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -130,7 +130,7 @@ function RadarMercadoPage() {
     queryKey: ["radar_buscas"],
     queryFn: async () => {
       const { data, error } = await (supabase as never as { from: (t: string) => { select: (s: string) => { order: (c: string, o: { ascending: boolean }) => { limit: (n: number) => Promise<{ data: Busca[] | null; error: Error | null }> } } } })
-        .from("radar_buscas")
+        .from("mkt_radar_buscas")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(10);

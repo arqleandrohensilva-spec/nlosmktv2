@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseExternal";
 import { PageHeader } from "@/components/page-header";
 import { Sparkles, Crosshair, ShieldCheck, Search, DollarSign } from "lucide-react";
 import {
@@ -68,7 +68,7 @@ function CustosPage() {
     queryKey: ["uso-ia-full", filtroMes, filtroModulo],
     queryFn: async () => {
       let q = supabase
-        .from("uso_ia")
+        .from("mkt_uso_ia")
         .select("*")
         .gte("created_at", inicio)
         .lt("created_at", fim)

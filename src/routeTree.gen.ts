@@ -11,12 +11,14 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ValidarRouteImport } from './routes/validar'
 import { Route as ReescreverRouteImport } from './routes/reescrever'
+import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
 import { Route as RadarMercadoRouteImport } from './routes/radar-mercado'
 import { Route as RadarRouteImport } from './routes/radar'
 import { Route as ProspeccaoRouteImport } from './routes/prospeccao'
 import { Route as PerformanceRouteImport } from './routes/performance'
 import { Route as ObjecoesRouteImport } from './routes/objecoes'
 import { Route as MarcaRouteImport } from './routes/marca'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as KitPublicacaoRouteImport } from './routes/kit-publicacao'
 import { Route as EstudosDeCasoRouteImport } from './routes/estudos-de-caso'
 import { Route as CustosRouteImport } from './routes/custos'
@@ -26,6 +28,7 @@ import { Route as ConcorrentesRouteImport } from './routes/concorrentes'
 import { Route as CalendarioRouteImport } from './routes/calendario'
 import { Route as BibliotecaRouteImport } from './routes/biblioteca'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 
 const ValidarRoute = ValidarRouteImport.update({
   id: '/validar',
@@ -35,6 +38,11 @@ const ValidarRoute = ValidarRouteImport.update({
 const ReescreverRoute = ReescreverRouteImport.update({
   id: '/reescrever',
   path: '/reescrever',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
+  id: '/redefinir-senha',
+  path: '/redefinir-senha',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RadarMercadoRoute = RadarMercadoRouteImport.update({
@@ -65,6 +73,11 @@ const ObjecoesRoute = ObjecoesRouteImport.update({
 const MarcaRoute = MarcaRouteImport.update({
   id: '/marca',
   path: '/marca',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KitPublicacaoRoute = KitPublicacaoRouteImport.update({
@@ -112,6 +125,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -123,14 +141,17 @@ export interface FileRoutesByFullPath {
   '/custos': typeof CustosRoute
   '/estudos-de-caso': typeof EstudosDeCasoRoute
   '/kit-publicacao': typeof KitPublicacaoRoute
+  '/login': typeof LoginRoute
   '/marca': typeof MarcaRoute
   '/objecoes': typeof ObjecoesRoute
   '/performance': typeof PerformanceRoute
   '/prospeccao': typeof ProspeccaoRoute
   '/radar': typeof RadarRoute
   '/radar-mercado': typeof RadarMercadoRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/reescrever': typeof ReescreverRoute
   '/validar': typeof ValidarRoute
+  '/auth/callback': typeof AuthCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -142,14 +163,17 @@ export interface FileRoutesByTo {
   '/custos': typeof CustosRoute
   '/estudos-de-caso': typeof EstudosDeCasoRoute
   '/kit-publicacao': typeof KitPublicacaoRoute
+  '/login': typeof LoginRoute
   '/marca': typeof MarcaRoute
   '/objecoes': typeof ObjecoesRoute
   '/performance': typeof PerformanceRoute
   '/prospeccao': typeof ProspeccaoRoute
   '/radar': typeof RadarRoute
   '/radar-mercado': typeof RadarMercadoRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/reescrever': typeof ReescreverRoute
   '/validar': typeof ValidarRoute
+  '/auth/callback': typeof AuthCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -162,14 +186,17 @@ export interface FileRoutesById {
   '/custos': typeof CustosRoute
   '/estudos-de-caso': typeof EstudosDeCasoRoute
   '/kit-publicacao': typeof KitPublicacaoRoute
+  '/login': typeof LoginRoute
   '/marca': typeof MarcaRoute
   '/objecoes': typeof ObjecoesRoute
   '/performance': typeof PerformanceRoute
   '/prospeccao': typeof ProspeccaoRoute
   '/radar': typeof RadarRoute
   '/radar-mercado': typeof RadarMercadoRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/reescrever': typeof ReescreverRoute
   '/validar': typeof ValidarRoute
+  '/auth/callback': typeof AuthCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -183,14 +210,17 @@ export interface FileRouteTypes {
     | '/custos'
     | '/estudos-de-caso'
     | '/kit-publicacao'
+    | '/login'
     | '/marca'
     | '/objecoes'
     | '/performance'
     | '/prospeccao'
     | '/radar'
     | '/radar-mercado'
+    | '/redefinir-senha'
     | '/reescrever'
     | '/validar'
+    | '/auth/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -202,14 +232,17 @@ export interface FileRouteTypes {
     | '/custos'
     | '/estudos-de-caso'
     | '/kit-publicacao'
+    | '/login'
     | '/marca'
     | '/objecoes'
     | '/performance'
     | '/prospeccao'
     | '/radar'
     | '/radar-mercado'
+    | '/redefinir-senha'
     | '/reescrever'
     | '/validar'
+    | '/auth/callback'
   id:
     | '__root__'
     | '/'
@@ -221,14 +254,17 @@ export interface FileRouteTypes {
     | '/custos'
     | '/estudos-de-caso'
     | '/kit-publicacao'
+    | '/login'
     | '/marca'
     | '/objecoes'
     | '/performance'
     | '/prospeccao'
     | '/radar'
     | '/radar-mercado'
+    | '/redefinir-senha'
     | '/reescrever'
     | '/validar'
+    | '/auth/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -241,14 +277,17 @@ export interface RootRouteChildren {
   CustosRoute: typeof CustosRoute
   EstudosDeCasoRoute: typeof EstudosDeCasoRoute
   KitPublicacaoRoute: typeof KitPublicacaoRoute
+  LoginRoute: typeof LoginRoute
   MarcaRoute: typeof MarcaRoute
   ObjecoesRoute: typeof ObjecoesRoute
   PerformanceRoute: typeof PerformanceRoute
   ProspeccaoRoute: typeof ProspeccaoRoute
   RadarRoute: typeof RadarRoute
   RadarMercadoRoute: typeof RadarMercadoRoute
+  RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   ReescreverRoute: typeof ReescreverRoute
   ValidarRoute: typeof ValidarRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -265,6 +304,13 @@ declare module '@tanstack/react-router' {
       path: '/reescrever'
       fullPath: '/reescrever'
       preLoaderRoute: typeof ReescreverRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/redefinir-senha': {
+      id: '/redefinir-senha'
+      path: '/redefinir-senha'
+      fullPath: '/redefinir-senha'
+      preLoaderRoute: typeof RedefinirSenhaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/radar-mercado': {
@@ -307,6 +353,13 @@ declare module '@tanstack/react-router' {
       path: '/marca'
       fullPath: '/marca'
       preLoaderRoute: typeof MarcaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/kit-publicacao': {
@@ -372,6 +425,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -385,25 +445,18 @@ const rootRouteChildren: RootRouteChildren = {
   CustosRoute: CustosRoute,
   EstudosDeCasoRoute: EstudosDeCasoRoute,
   KitPublicacaoRoute: KitPublicacaoRoute,
+  LoginRoute: LoginRoute,
   MarcaRoute: MarcaRoute,
   ObjecoesRoute: ObjecoesRoute,
   PerformanceRoute: PerformanceRoute,
   ProspeccaoRoute: ProspeccaoRoute,
   RadarRoute: RadarRoute,
   RadarMercadoRoute: RadarMercadoRoute,
+  RedefinirSenhaRoute: RedefinirSenhaRoute,
   ReescreverRoute: ReescreverRoute,
   ValidarRoute: ValidarRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

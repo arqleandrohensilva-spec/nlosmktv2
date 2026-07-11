@@ -80,8 +80,8 @@ Responda EXCLUSIVAMENTE com JSON puro, sem markdown:
 
 function serverSb() {
   return createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_PUBLISHABLE_KEY!,
+    "https://krzuroijejfozljhchok.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyenVyb2lqZWpmb3psamhjaG9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5Mjg4MjEsImV4cCI6MjA5MzUwNDgyMX0.mFMFfY8TdviFVzHvfKYUrZENpcT4wdyW-52-CUNqsOo",
     { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
   );
 }
@@ -197,7 +197,7 @@ export const gerarAntesDepois = createServerFn({ method: "POST" })
 
     const sb = serverSb();
     const { data: row, error } = await sb
-      .from("antes_depois")
+      .from("mkt_antes_depois")
       .insert({
         nome: data.nome,
         linha: data.linha,
@@ -224,7 +224,7 @@ export const gerarAntesDepois = createServerFn({ method: "POST" })
   });
 
 async function baixarComoBase64(sb: ReturnType<typeof serverSb>, path: string) {
-  const { data: file, error } = await sb.storage.from("biblioteca-visual").download(path);
+  const { data: file, error } = await sb.storage.from("mkt-biblioteca-visual").download(path);
   if (error || !file) throw new Error(`Falha ao baixar ${path}`);
   const buf = new Uint8Array(await file.arrayBuffer());
   let binary = "";
@@ -237,7 +237,7 @@ export const regenerarAntesDepois = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const sb = serverSb();
     const { data: row, error } = await sb
-      .from("antes_depois")
+      .from("mkt_antes_depois")
       .select("*, antes:biblioteca_imagens!antes_depois_imagem_antes_id_fkey(url_storage), depois:biblioteca_imagens!antes_depois_imagem_depois_id_fkey(url_storage)")
       .eq("id", data.id)
       .single();
@@ -260,7 +260,7 @@ export const regenerarAntesDepois = createServerFn({ method: "POST" })
     );
 
     const { data: updated, error: upErr } = await sb
-      .from("antes_depois")
+      .from("mkt_antes_depois")
       .update({
         descricao_transformacao: parsed.descricao_transformacao,
         conteudos: parsed.conteudos as never,
@@ -285,14 +285,14 @@ export const gerarNarrativaProjeto = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const sb = serverSb();
     const { data: projeto, error: pErr } = await sb
-      .from("projetos")
+      .from("mkt_projetos")
       .select("*")
       .eq("id", data.projeto_id)
       .single();
     if (pErr || !projeto) throw new Error("Projeto não encontrado.");
 
     const { data: imagens, error: iErr } = await sb
-      .from("biblioteca_imagens")
+      .from("mkt_biblioteca_imagens")
       .select("id, ambiente, descricao_tecnica, tags, tipo")
       .eq("projeto_id", data.projeto_id)
       .order("created_at", { ascending: true });

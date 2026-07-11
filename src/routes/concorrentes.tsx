@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseExternal";
 import { PageHeader } from "@/components/page-header";
 import {
   analisarConcorrente,
@@ -65,7 +65,7 @@ function ConcorrentesPage() {
     queryKey: ["analises_concorrentes"],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
-        .from("analises_concorrentes")
+        .from("mkt_analises_concorrentes")
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -101,7 +101,7 @@ function ConcorrentesPage() {
     mutationFn: async () => {
       if (!output) throw new Error("Nada para salvar.");
       const { error } = await (supabase as any)
-        .from("analises_concorrentes")
+        .from("mkt_analises_concorrentes")
         .insert({
           handle: currentHandle,
           nicho: currentNicho || null,
@@ -120,7 +120,7 @@ function ConcorrentesPage() {
   const deletarMut = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await (supabase as any)
-        .from("analises_concorrentes")
+        .from("mkt_analises_concorrentes")
         .delete()
         .eq("id", id);
       if (error) throw error;
