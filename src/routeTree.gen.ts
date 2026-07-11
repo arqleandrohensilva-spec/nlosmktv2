@@ -17,6 +17,7 @@ import { Route as ProspeccaoRouteImport } from './routes/prospeccao'
 import { Route as PerformanceRouteImport } from './routes/performance'
 import { Route as ObjecoesRouteImport } from './routes/objecoes'
 import { Route as MarcaRouteImport } from './routes/marca'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as KitPublicacaoRouteImport } from './routes/kit-publicacao'
 import { Route as EstudosDeCasoRouteImport } from './routes/estudos-de-caso'
 import { Route as CustosRouteImport } from './routes/custos'
@@ -65,6 +66,11 @@ const ObjecoesRoute = ObjecoesRouteImport.update({
 const MarcaRoute = MarcaRouteImport.update({
   id: '/marca',
   path: '/marca',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KitPublicacaoRoute = KitPublicacaoRouteImport.update({
@@ -123,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/custos': typeof CustosRoute
   '/estudos-de-caso': typeof EstudosDeCasoRoute
   '/kit-publicacao': typeof KitPublicacaoRoute
+  '/login': typeof LoginRoute
   '/marca': typeof MarcaRoute
   '/objecoes': typeof ObjecoesRoute
   '/performance': typeof PerformanceRoute
@@ -142,6 +149,7 @@ export interface FileRoutesByTo {
   '/custos': typeof CustosRoute
   '/estudos-de-caso': typeof EstudosDeCasoRoute
   '/kit-publicacao': typeof KitPublicacaoRoute
+  '/login': typeof LoginRoute
   '/marca': typeof MarcaRoute
   '/objecoes': typeof ObjecoesRoute
   '/performance': typeof PerformanceRoute
@@ -162,6 +170,7 @@ export interface FileRoutesById {
   '/custos': typeof CustosRoute
   '/estudos-de-caso': typeof EstudosDeCasoRoute
   '/kit-publicacao': typeof KitPublicacaoRoute
+  '/login': typeof LoginRoute
   '/marca': typeof MarcaRoute
   '/objecoes': typeof ObjecoesRoute
   '/performance': typeof PerformanceRoute
@@ -183,6 +192,7 @@ export interface FileRouteTypes {
     | '/custos'
     | '/estudos-de-caso'
     | '/kit-publicacao'
+    | '/login'
     | '/marca'
     | '/objecoes'
     | '/performance'
@@ -202,6 +212,7 @@ export interface FileRouteTypes {
     | '/custos'
     | '/estudos-de-caso'
     | '/kit-publicacao'
+    | '/login'
     | '/marca'
     | '/objecoes'
     | '/performance'
@@ -221,6 +232,7 @@ export interface FileRouteTypes {
     | '/custos'
     | '/estudos-de-caso'
     | '/kit-publicacao'
+    | '/login'
     | '/marca'
     | '/objecoes'
     | '/performance'
@@ -241,6 +253,7 @@ export interface RootRouteChildren {
   CustosRoute: typeof CustosRoute
   EstudosDeCasoRoute: typeof EstudosDeCasoRoute
   KitPublicacaoRoute: typeof KitPublicacaoRoute
+  LoginRoute: typeof LoginRoute
   MarcaRoute: typeof MarcaRoute
   ObjecoesRoute: typeof ObjecoesRoute
   PerformanceRoute: typeof PerformanceRoute
@@ -307,6 +320,13 @@ declare module '@tanstack/react-router' {
       path: '/marca'
       fullPath: '/marca'
       preLoaderRoute: typeof MarcaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/kit-publicacao': {
@@ -385,6 +405,7 @@ const rootRouteChildren: RootRouteChildren = {
   CustosRoute: CustosRoute,
   EstudosDeCasoRoute: EstudosDeCasoRoute,
   KitPublicacaoRoute: KitPublicacaoRoute,
+  LoginRoute: LoginRoute,
   MarcaRoute: MarcaRoute,
   ObjecoesRoute: ObjecoesRoute,
   PerformanceRoute: PerformanceRoute,
