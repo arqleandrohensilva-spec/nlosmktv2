@@ -7,8 +7,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-const cn = (...classes: (string | false | null | undefined)[]) =>
-  classes.filter(Boolean).join(' ');
+const cn = (...classes: unknown[]) =>
+  classes.filter((c): c is string => typeof c === 'string' && c.length > 0).join(' ');
 
 export type NavChild = {
   label: string;
