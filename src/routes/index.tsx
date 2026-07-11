@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseExternal";
 import { PageHeader } from "@/components/page-header";
 import { CustoIaCard, CustoIaAlertas } from "@/components/custo-ia-card";
 import {
@@ -30,10 +30,10 @@ function Dashboard() {
     queryKey: ["dashboard-metrics", mes, ano],
     queryFn: async () => {
       const [{ data: mensal }, { data: publicados }, { data: dores }] = await Promise.all([
-        supabase.from("posts").select("id, linha").eq("mes", mes).eq("ano", ano),
-        supabase.from("posts").select("id").eq("status", "publicado"),
+        supabase.from("mkt_posts").select("id, linha").eq("mes", mes).eq("ano", ano),
+        supabase.from("mkt_posts").select("id").eq("status", "publicado"),
         supabase
-          .from("dores")
+          .from("mkt_dores")
           .select("titulo, vezes_usada")
           .order("vezes_usada", { ascending: false })
           .limit(1),
@@ -56,7 +56,7 @@ function Dashboard() {
     queryFn: async () => {
       const desde = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
       const { data } = await supabase
-        .from("posts")
+        .from("mkt_posts")
         .select("pilar, created_at")
         .gte("created_at", desde);
       return data ?? [];
@@ -68,7 +68,7 @@ function Dashboard() {
     queryFn: async () => {
       const hoje = new Date().toISOString().slice(0, 10);
       const { data } = await (supabase as any)
-        .from("prospeccoes")
+        .from("mkt_prospeccoes")
         .select("id")
         .lt("data_followup", hoje)
         .not("data_followup", "is", null)

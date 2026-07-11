@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseExternal";
 import { PageHeader } from "@/components/page-header";
 import { Check, ArrowUpRight } from "lucide-react";
 
@@ -14,7 +14,7 @@ function Objecoes() {
     queryKey: ["objecoes"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("objecoes")
+        .from("mkt_objecoes")
         .select("*")
         .order("respondida", { ascending: true })
         .order("created_at");

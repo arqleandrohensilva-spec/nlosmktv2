@@ -149,7 +149,7 @@ export const buscarLancamentos = createServerFn({ method: "POST" }).handler(asyn
   for (const l of lista) {
     if (!l?.nome || !l?.cidade) continue;
     const { data: existing } = await client
-      .from("lancamentos")
+      .from("mkt_lancamentos")
       .select("id")
       .eq("nome", l.nome)
       .eq("cidade", l.cidade)
@@ -158,7 +158,7 @@ export const buscarLancamentos = createServerFn({ method: "POST" }).handler(asyn
     const tipo = ["loteamento", "condominio", "apartamento", "comercial"].includes(l.tipo)
       ? l.tipo
       : "loteamento";
-    const { error } = await client.from("lancamentos").insert({
+    const { error } = await client.from("mkt_lancamentos").insert({
       nome: l.nome,
       tipo,
       cidade: l.cidade,
@@ -173,7 +173,7 @@ export const buscarLancamentos = createServerFn({ method: "POST" }).handler(asyn
     if (!error) novos++;
   }
 
-  await client.from("radar_buscas").insert({
+  await client.from("mkt_radar_buscas").insert({
     resultados_encontrados: lista.length,
     novos_lancamentos: novos,
     resumo: parsed.resumo ?? null,
@@ -209,7 +209,7 @@ export const gerarConteudosLancamento = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const client = sb();
     const { data: row, error } = await client
-      .from("lancamentos")
+      .from("mkt_lancamentos")
       .select("*")
       .eq("id", data.id)
       .single();
@@ -254,7 +254,7 @@ export const gerarConteudosLancamento = createServerFn({ method: "POST" })
     const parsed = extractJson<ConteudoResposta>(text);
 
     const { data: updated, error: upErr } = await client
-      .from("lancamentos")
+      .from("mkt_lancamentos")
       .update({
         oportunidade_linha: parsed.oportunidade_linha,
         conteudos: {
@@ -295,7 +295,7 @@ export const atualizarLancamento = createServerFn({ method: "POST" })
     if (data.status !== undefined) patch.status = data.status;
     if (data.notas !== undefined) patch.notas = data.notas;
     const { data: row, error } = await client
-      .from("lancamentos")
+      .from("mkt_lancamentos")
       .update(patch)
       .eq("id", data.id)
       .select("*")
@@ -376,7 +376,7 @@ export const adicionarManual = createServerFn({ method: "POST" })
     const descricao = parsed.descricao;
 
     const { data: inserted, error } = await client
-      .from("lancamentos")
+      .from("mkt_lancamentos")
       .insert({
         nome: parsed.nome || data.nome,
         tipo,

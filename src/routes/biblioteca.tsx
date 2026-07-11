@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseExternal";
 import { PageHeader } from "@/components/page-header";
 import { analisarImagem, regenerarConteudos } from "@/lib/biblioteca.functions";
 import {
@@ -116,7 +116,7 @@ function AbaBiblioteca({ projetoInicial }: { projetoInicial?: string }) {
   const { data: projetos } = useQuery({
     queryKey: ["projetos"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("projetos").select("*").order("nome");
+      const { data, error } = await supabase.from("mkt_projetos").select("*").order("nome");
       if (error) throw error;
       return data ?? [];
     },
@@ -126,7 +126,7 @@ function AbaBiblioteca({ projetoInicial }: { projetoInicial?: string }) {
     queryKey: ["biblioteca", linha, tipo, projetoId],
     queryFn: async () => {
       let q = supabase
-        .from("biblioteca_imagens")
+        .from("mkt_biblioteca_imagens")
         .select("*, projeto:projetos(nome, linha)")
         .order("created_at", { ascending: false });
       if (linha) q = q.eq("linha", linha);
@@ -146,8 +146,8 @@ function AbaBiblioteca({ projetoInicial }: { projetoInicial?: string }) {
     queryFn: async () => {
       const termo = busca.trim().toLowerCase();
       const [porTag, porDesc] = await Promise.all([
-        supabase.from("biblioteca_imagens").select("id").contains("tags", [termo]),
-        supabase.from("biblioteca_imagens").select("id").ilike("descricao_tecnica", `%${termo}%`),
+        supabase.from("mkt_biblioteca_imagens").select("id").contains("tags", [termo]),
+        supabase.from("mkt_biblioteca_imagens").select("id").ilike("descricao_tecnica", `%${termo}%`),
       ]);
       const ids = new Set<string>();
       (porTag.data ?? []).forEach((r: any) => ids.add(r.id));
@@ -166,7 +166,7 @@ function AbaBiblioteca({ projetoInicial }: { projetoInicial?: string }) {
   const { data: topTags } = useQuery({
     queryKey: ["biblioteca-top-tags"],
     queryFn: async () => {
-      const { data } = await supabase.from("biblioteca_imagens").select("tags");
+      const { data } = await supabase.from("mkt_biblioteca_imagens").select("tags");
       const counts: Record<string, number> = {};
       (data ?? []).forEach((r: any) => {
         (r.tags ?? []).forEach((t: string) => {
@@ -545,7 +545,7 @@ function useProjetos() {
   return useQuery({
     queryKey: ["projetos"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("projetos").select("*").order("nome");
+      const { data, error } = await supabase.from("mkt_projetos").select("*").order("nome");
       if (error) throw error;
       return data ?? [];
     },
@@ -566,7 +566,7 @@ async function uploadParaStorage(file: File): Promise<string> {
   const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
   const path = `${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage
-    .from("biblioteca-visual")
+    .from("mkt-biblioteca-visual")
     .upload(path, file, { cacheControl: "3600", upsert: false, contentType: file.type });
   if (error) throw new Error(`Falha no upload: ${error.message}`);
   return path;
@@ -925,8 +925,8 @@ function AbaProjetos({ onVer }: { onVer: () => void }) {
   const { data: projetos } = useQuery({
     queryKey: ["projetos-detalhe"],
     queryFn: async () => {
-      const { data: ps } = await supabase.from("projetos").select("*").order("nome");
-      const { data: imgs } = await supabase.from("biblioteca_imagens").select("projeto_id");
+      const { data: ps } = await supabase.from("mkt_projetos").select("*").order("nome");
+      const { data: imgs } = await supabase.from("mkt_biblioteca_imagens").select("projeto_id");
       const counts = new Map<string, number>();
       (imgs ?? []).forEach((i: any) => {
         if (!i.projeto_id) return;
@@ -938,7 +938,7 @@ function AbaProjetos({ onVer }: { onVer: () => void }) {
 
   const arquivar = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("projetos").update({ status: "arquivado" }).eq("id", id);
+      const { error } = await supabase.from("mkt_projetos").update({ status: "arquivado" }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -1038,7 +1038,7 @@ function ProjetoModal({
       if (!nome.trim()) throw new Error("Nome obrigatório");
       if (projeto) {
         const { data, error } = await supabase
-          .from("projetos")
+          .from("mkt_projetos")
           .update({ nome, linha, descricao: descricao || null })
           .eq("id", projeto.id)
           .select("*")
@@ -1047,7 +1047,7 @@ function ProjetoModal({
         return data;
       } else {
         const { data, error } = await supabase
-          .from("projetos")
+          .from("mkt_projetos")
           .insert({ nome, linha, descricao: descricao || null })
           .select("*")
           .single();
@@ -1191,7 +1191,7 @@ function AbaAntesDepois() {
     queryKey: ["antes-depois"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("antes_depois")
+        .from("mkt_antes_depois")
         .select(
           "*, projeto:projetos(nome), antes:biblioteca_imagens!antes_depois_imagem_antes_id_fkey(id, url_storage, nome_arquivo), depois:biblioteca_imagens!antes_depois_imagem_depois_id_fkey(id, url_storage, nome_arquivo)",
         )
@@ -1322,7 +1322,7 @@ function NovoComparativoModal({ onClose }: { onClose: () => void }) {
   }, [depoisFile]);
 
   async function pathToBase64(path: string): Promise<{ base64: string; media_type: string }> {
-    const { data, error } = await supabase.storage.from("biblioteca-visual").download(path);
+    const { data, error } = await supabase.storage.from("mkt-biblioteca-visual").download(path);
     if (error || !data) throw new Error("Falha ao baixar imagem da biblioteca.");
     const buf = new Uint8Array(await data.arrayBuffer());
     let binary = "";
@@ -1348,7 +1348,7 @@ function NovoComparativoModal({ onClose }: { onClose: () => void }) {
     const path = await uploadParaStorage(file);
     const { base64, media_type } = await fileToBase64(file);
     const { data: row, error } = await supabase
-      .from("biblioteca_imagens")
+      .from("mkt_biblioteca_imagens")
       .insert({
         nome_arquivo: file.name,
         url_storage: path,
@@ -1681,7 +1681,7 @@ function NarrativaProjetoDrawer({ projeto, onClose }: { projeto: any; onClose: (
     queryKey: ["projeto-count", projeto.id],
     queryFn: async () => {
       const { count, error } = await supabase
-        .from("biblioteca_imagens")
+        .from("mkt_biblioteca_imagens")
         .select("id", { count: "exact", head: true })
         .eq("projeto_id", projeto.id);
       if (error) throw error;

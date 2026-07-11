@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseExternal";
 import { PageHeader } from "@/components/page-header";
 import { FORMATOS, LINHAS, LINHA_BADGE } from "@/lib/nl-brand";
 import { useState, useMemo } from "react";
@@ -20,7 +20,7 @@ function Performance() {
     queryKey: ["performance-list"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("posts")
+        .from("mkt_posts")
         .select("id, linha, formato, dor_id, data_publicacao, created_at, dores(titulo), performance(views, curtidas, comentarios, salvamentos, compartilhamentos)")
         .eq("status", "publicado")
         .order("data_publicacao", { ascending: false });
@@ -278,7 +278,7 @@ function RegistrarModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
     queryKey: ["posts-for-perf"],
     queryFn: async () => {
       const { data } = await supabase
-        .from("posts")
+        .from("mkt_posts")
         .select("id, linha, formato, copy_legenda, status")
         .in("status", ["pronto", "publicado"])
         .order("created_at", { ascending: false });
@@ -289,7 +289,7 @@ function RegistrarModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
   const save = useMutation({
     mutationFn: async () => {
       if (!postId) throw new Error("Selecione um post");
-      const { error: e1 } = await supabase.from("performance").insert({
+      const { error: e1 } = await supabase.from("mkt_performance").insert({
         post_id: postId,
         views: Number(views) || 0,
         curtidas: Number(curtidas) || 0,
@@ -299,7 +299,7 @@ function RegistrarModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
       });
       if (e1) throw e1;
       await supabase
-        .from("posts")
+        .from("mkt_posts")
         .update({ status: "publicado", data_publicacao: new Date().toISOString().slice(0, 10) })
         .eq("id", postId);
     },

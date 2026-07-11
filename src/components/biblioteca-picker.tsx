@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseExternal";
 import { X, Image as ImageIcon, Loader2 } from "lucide-react";
 
 export type BibliotecaImagemLite = {
@@ -19,7 +19,7 @@ export type BibliotecaImagemLite = {
 export async function signBibliotecaUrls(paths: string[]) {
   if (paths.length === 0) return {} as Record<string, string>;
   const { data, error } = await supabase.storage
-    .from("biblioteca-visual")
+    .from("mkt-biblioteca-visual")
     .createSignedUrls(paths, 3600);
   if (error) return {} as Record<string, string>;
   const map: Record<string, string> = {};
@@ -47,7 +47,7 @@ export function BibliotecaPicker({
     enabled: open,
     queryFn: async () => {
       let q = supabase
-        .from("biblioteca_imagens")
+        .from("mkt_biblioteca_imagens")
         .select("*, projeto:projetos(nome)")
         .order("created_at", { ascending: false })
         .limit(60);

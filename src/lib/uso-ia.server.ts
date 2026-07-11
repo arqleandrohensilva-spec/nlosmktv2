@@ -28,7 +28,7 @@ export async function logAnthropicUsage(input: LogAnthropicInput) {
   const custo_usd = tokens_input * PRICE_INPUT + tokens_output * PRICE_OUTPUT;
   const custo_brl = custo_usd * USD_BRL;
   try {
-    await serverClient().from("uso_ia").insert({
+    await serverClient().from("mkt_uso_ia").insert({
       modulo: input.modulo,
       operacao: input.operacao,
       tokens_input,
@@ -51,7 +51,7 @@ export async function logFixedUsage(input: {
   detalhes?: Record<string, unknown>;
 }) {
   try {
-    await serverClient().from("uso_ia").insert({
+    await serverClient().from("mkt_uso_ia").insert({
       modulo: input.modulo,
       operacao: input.operacao,
       tokens_input: 0,

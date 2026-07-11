@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseExternal";
 import { gerarCopy, type CopyOutput } from "@/lib/copy.functions";
 import { PageHeader } from "@/components/page-header";
 import { LINHAS, FORMATOS } from "@/lib/nl-brand";
@@ -42,7 +42,7 @@ function MotorCopy() {
   const { data: dores } = useQuery({
     queryKey: ["dores"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("dores").select("*").order("titulo");
+      const { data, error } = await supabase.from("mkt_dores").select("*").order("titulo");
       if (error) throw error;
       return data ?? [];
     },
@@ -52,7 +52,7 @@ function MotorCopy() {
     queryKey: ["dor-performance"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("posts")
+        .from("mkt_posts")
         .select("dor_id, performance(curtidas, comentarios, salvamentos)")
         .eq("status", "publicado");
       if (error) throw error;
@@ -128,7 +128,7 @@ function MotorCopy() {
     mutationFn: async () => {
       if (!output || !dorSelecionada) throw new Error("Sem conteúdo para salvar");
       const now = new Date();
-      const { error } = await supabase.from("posts").insert({
+      const { error } = await supabase.from("mkt_posts").insert({
         linha,
         formato,
         dor_id: dorSelecionada.id,
@@ -153,7 +153,7 @@ function MotorCopy() {
       });
       if (error) throw error;
       await supabase
-        .from("dores")
+        .from("mkt_dores")
         .update({
           ultima_vez_usada: now.toISOString(),
           vezes_usada: (dorSelecionada.vezes_usada ?? 0) + 1,

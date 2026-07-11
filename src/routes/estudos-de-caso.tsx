@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseExternal";
 import { PageHeader } from "@/components/page-header";
 import { LINHAS } from "@/lib/nl-brand";
 import { gerarEstudoCaso, type EstudoCasoOutput } from "@/lib/estudos.functions";
@@ -81,7 +81,7 @@ function EstudosPage() {
     queryKey: ["estudos-caso"],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
-        .from("estudos_caso")
+        .from("mkt_estudos_caso")
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -134,7 +134,7 @@ function EstudosPage() {
         status: "salvo",
       };
       const { data, error } = await (supabase as any)
-        .from("estudos_caso")
+        .from("mkt_estudos_caso")
         .insert(payload)
         .select("id")
         .single();
@@ -582,7 +582,7 @@ function EstudosPage() {
                         return;
                       }
                       const { data } = await (supabase as any)
-                        .from("biblioteca_imagens")
+                        .from("mkt_biblioteca_imagens")
                         .select("*, projeto:projetos(nome)")
                         .in("id", e.imagens_ids);
                       const rows = (data ?? []) as any[];

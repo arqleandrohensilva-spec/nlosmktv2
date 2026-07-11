@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { gerarKitPublicacao, type KitOutput } from "@/lib/kit.functions";
 import { PageHeader } from "@/components/page-header";
 import { LINHAS, PILARES } from "@/lib/nl-brand";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseExternal";
 import { Loader2, Copy, RotateCcw, Square, Layers, Play, Briefcase, Mail, Save, Image as ImageIcon, X } from "lucide-react";
 import { BibliotecaPicker, type BibliotecaImagemLite } from "@/components/biblioteca-picker";
 import { AgendarButton } from "@/components/agendar-modal";
@@ -47,7 +47,7 @@ function KitPublicacaoPage() {
     mutationFn: async () => {
       if (!resultado) throw new Error("Nada para salvar");
       const now = new Date();
-      const { error } = await supabase.from("posts").insert({
+      const { error } = await supabase.from("mkt_posts").insert({
         linha,
         formato: "kit",
         pilar: tom || null,

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseExternal";
 import { AlertTriangle, AlertOctagon } from "lucide-react";
 import {
   Dialog,
@@ -29,7 +29,7 @@ export function useCustoIaMes() {
     queryKey: ["uso-ia-mes-total", inicio],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("uso_ia")
+        .from("mkt_uso_ia")
         .select("custo_brl")
         .gte("created_at", inicio);
       if (error) throw error;
@@ -41,7 +41,7 @@ export function useCustoIaMes() {
     queryKey: ["config-limite-mensal"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("configuracoes")
+        .from("mkt_configuracoes")
         .select("valor")
         .eq("chave", "limite_mensal_brl")
         .maybeSingle();
@@ -179,7 +179,7 @@ function AjustarLimiteDialog({
       const n = Number(valor.replace(",", "."));
       if (!isFinite(n) || n <= 0) throw new Error("Informe um valor maior que zero.");
       const { error } = await supabase
-        .from("configuracoes")
+        .from("mkt_configuracoes")
         .upsert(
           { chave: "limite_mensal_brl", valor: n.toFixed(2), updated_at: new Date().toISOString() },
           { onConflict: "chave" },
