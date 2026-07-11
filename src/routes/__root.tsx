@@ -141,11 +141,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthGate>
-        <AppShell>
-          <Outlet />
-        </AppShell>
-      </AuthGate>
+      <AuthGate />
       <Toaster position="top-right" richColors closeButton />
     </QueryClientProvider>
   );
@@ -153,7 +149,7 @@ function RootComponent() {
 
 const PUBLIC_ROUTES = new Set(["/login", "/auth/callback", "/redefinir-senha"]);
 
-function AuthGate({ children }: { children: ReactNode }) {
+function AuthGate() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
   const [status, setStatus] = useState<"loading" | "in" | "out">("loading");
@@ -181,7 +177,7 @@ function AuthGate({ children }: { children: ReactNode }) {
     }
   }, [status, isPublic, navigate]);
 
-  if (isPublic) return <>{children}</>;
+  if (isPublic) return <Outlet />;
   if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: "#E8E4DF" }}>
@@ -190,5 +186,9 @@ function AuthGate({ children }: { children: ReactNode }) {
     );
   }
   if (status === "out") return null;
-  return <>{children}</>;
+  return (
+    <AppShell>
+      <Outlet />
+    </AppShell>
+  );
 }
