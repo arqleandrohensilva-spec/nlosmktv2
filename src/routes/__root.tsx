@@ -82,18 +82,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "NL OS MKT" },
+      { title: "NL OS MKT v2" },
       {
         name: "description",
         content:
           "Sistema interno de marketing estratégico da NL Arquitetos. Motor de copy, calendário editorial, banco de objeções e inteligência de performance.",
       },
       { name: "author", content: "NL Arquitetos" },
-      { property: "og:title", content: "NL OS MKT" },
+      { property: "og:title", content: "NL OS MKT v2" },
       { property: "og:description", content: "Sistema interno de marketing estratégico da NL Arquitetos. Motor de copy, calendário editorial, banco de objeções e inteligência de performance." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "NL OS MKT" },
+      { name: "twitter:title", content: "NL OS MKT v2" },
       { name: "twitter:description", content: "Sistema interno de marketing estratégico da NL Arquitetos. Motor de copy, calendário editorial, banco de objeções e inteligência de performance." },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/17aa32cb-5b51-4921-b4a0-941937aa72c5/id-preview-8f3d5dec--53999a56-f6d8-4b57-9398-5dcec8bbf281.lovable.app-1783463277246.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/17aa32cb-5b51-4921-b4a0-941937aa72c5/id-preview-8f3d5dec--53999a56-f6d8-4b57-9398-5dcec8bbf281.lovable.app-1783463277246.png" },
