@@ -153,7 +153,7 @@ function isLovablePreview() {
   if (typeof window === "undefined") return false;
   const h = window.location.hostname;
   return (
-    h.endsWith(".lovable.app") ||
+    h.startsWith("id-preview--") ||
     h.endsWith(".lovable.dev") ||
     h.endsWith(".lovableproject.com") ||
     h === "localhost" ||
