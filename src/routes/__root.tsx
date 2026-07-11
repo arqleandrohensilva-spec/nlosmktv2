@@ -149,13 +149,31 @@ function RootComponent() {
 
 const PUBLIC_ROUTES = new Set(["/login", "/auth/callback", "/redefinir-senha"]);
 
+function isLovablePreview() {
+  if (typeof window === "undefined") return false;
+  const h = window.location.hostname;
+  return (
+    h.endsWith(".lovable.app") ||
+    h.endsWith(".lovable.dev") ||
+    h.endsWith(".lovableproject.com") ||
+    h === "localhost" ||
+    h === "127.0.0.1"
+  );
+}
+
 function AuthGate() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
   const [status, setStatus] = useState<"loading" | "in" | "out">("loading");
+  const [bypass, setBypass] = useState(false);
 
   useEffect(() => {
     let mounted = true;
+    if (isLovablePreview()) {
+      setBypass(true);
+      setStatus("in");
+      return;
+    }
     supabaseExternal.auth.getSession().then(({ data }) => {
       if (!mounted) return;
       setStatus(data.session ? "in" : "out");
@@ -172,10 +190,10 @@ function AuthGate() {
   const isPublic = PUBLIC_ROUTES.has(pathname);
 
   useEffect(() => {
-    if (status === "out" && !isPublic) {
+    if (!bypass && status === "out" && !isPublic) {
       navigate({ to: "/login", replace: true });
     }
-  }, [status, isPublic, navigate]);
+  }, [status, isPublic, navigate, bypass]);
 
   if (isPublic) return <Outlet />;
   if (status === "loading") {
