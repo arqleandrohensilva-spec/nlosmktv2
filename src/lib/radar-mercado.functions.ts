@@ -9,6 +9,7 @@ function sb() {
   try {
     authHeader = getRequest()?.headers.get("authorization") ?? undefined;
   } catch {}
+  console.log("[radar sb()] authHeader present:", !!authHeader, authHeader ? authHeader.slice(0, 20) + "..." : "MISSING");
   return createClient(
     "https://krzuroijejfozljhchok.supabase.co",
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyenVyb2lqZWpmb3psamhjaG9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5Mjg4MjEsImV4cCI6MjA5MzUwNDgyMX0.mFMFfY8TdviFVzHvfKYUrZENpcT4wdyW-52-CUNqsOo",
