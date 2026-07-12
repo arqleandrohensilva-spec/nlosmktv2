@@ -1,13 +1,21 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
+import { getRequest } from "@tanstack/react-start/server";
 import { logAnthropicUsage } from "./uso-ia.server";
 
 function sb() {
+  let authHeader: string | undefined;
+  try {
+    authHeader = getRequest()?.headers.get("authorization") ?? undefined;
+  } catch {}
   return createClient(
     "https://krzuroijejfozljhchok.supabase.co",
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyenVyb2lqZWpmb3psamhjaG9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5Mjg4MjEsImV4cCI6MjA5MzUwNDgyMX0.mFMFfY8TdviFVzHvfKYUrZENpcT4wdyW-52-CUNqsOo",
-    { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
+    {
+      auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+      global: authHeader ? { headers: { Authorization: authHeader } } : undefined,
+    },
   );
 }
 
