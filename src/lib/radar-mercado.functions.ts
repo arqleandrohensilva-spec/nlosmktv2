@@ -1,15 +1,27 @@
-import { createServerFn } from "@tanstack/react-start";
+import { createServerFn, createMiddleware } from "@tanstack/react-start";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { getRequest } from "@tanstack/react-start/server";
+import { supabaseExternal } from "@/lib/supabaseExternal";
 import { logAnthropicUsage } from "./uso-ia.server";
 
-function sb() {
-  let authHeader: string | undefined;
-  try {
-    authHeader = getRequest()?.headers.get("authorization") ?? undefined;
-  } catch {}
-  console.log("[radar sb()] authHeader present:", !!authHeader, authHeader ? authHeader.slice(0, 20) + "..." : "MISSING");
+// Client middleware forwards the external Supabase session token via sendContext,
+// so the server always has it regardless of how global middleware serializes headers.
+const withExternalAuth = createMiddleware({ type: "function" })
+  .client(async ({ next }) => {
+    const { data } = await supabaseExternal.auth.getSession();
+    const token = data.session?.access_token ?? null;
+    return next({ sendContext: { accessToken: token } });
+  })
+  .server(async ({ next, context }) => next({ context }));
+
+function sb(accessToken?: string | null) {
+  let authHeader: string | undefined = accessToken ? `Bearer ${accessToken}` : undefined;
+  if (!authHeader) {
+    try {
+      authHeader = getRequest()?.headers.get("authorization") ?? undefined;
+    } catch {}
+  }
   return createClient(
     "https://krzuroijejfozljhchok.supabase.co",
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyenVyb2lqZWpmb3psamhjaG9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5Mjg4MjEsImV4cCI6MjA5MzUwNDgyMX0.mFMFfY8TdviFVzHvfKYUrZENpcT4wdyW-52-CUNqsOo",
@@ -122,7 +134,9 @@ type LancamentoBruto = {
   data_lancamento: string | null;
 };
 
-export const buscarLancamentos = createServerFn({ method: "POST" }).handler(async () => {
+export const buscarLancamentos = createServerFn({ method: "POST" })
+  .middleware([withExternalAuth])
+  .handler(async ({ context }) => {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -153,7 +167,7 @@ export const buscarLancamentos = createServerFn({ method: "POST" }).handler(asyn
   const parsed = extractJson<{ lancamentos: LancamentoBruto[]; resumo: string }>(finalText);
   const lista = Array.isArray(parsed.lancamentos) ? parsed.lancamentos : [];
 
-  const client = sb();
+  const client = sb(context.accessToken);
   let novos = 0;
   for (const l of lista) {
     if (!l?.nome || !l?.cidade) continue;
@@ -214,9 +228,10 @@ type ConteudoResposta = {
 };
 
 export const gerarConteudosLancamento = createServerFn({ method: "POST" })
+  .middleware([withExternalAuth])
   .inputValidator((input: unknown) => ConteudoInput.parse(input))
-  .handler(async ({ data }) => {
-    const client = sb();
+  .handler(async ({ data, context }) => {
+    const client = sb(context.accessToken);
     const { data: row, error } = await client
       .from("mkt_lancamentos")
       .select("*")
@@ -297,9 +312,10 @@ const UpdateInput = z.object({
 });
 
 export const atualizarLancamento = createServerFn({ method: "POST" })
+  .middleware([withExternalAuth])
   .inputValidator((input: unknown) => UpdateInput.parse(input))
-  .handler(async ({ data }) => {
-    const client = sb();
+  .handler(async ({ data, context }) => {
+    const client = sb(context.accessToken);
     const patch: Record<string, unknown> = {};
     if (data.status !== undefined) patch.status = data.status;
     if (data.notas !== undefined) patch.notas = data.notas;
@@ -335,8 +351,9 @@ Responda EXCLUSIVAMENTE com JSON puro, sem markdown:
 }`;
 
 export const adicionarManual = createServerFn({ method: "POST" })
+  .middleware([withExternalAuth])
   .inputValidator((input: unknown) => ManualInput.parse(input))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const userPrompt = `Pesquise na web tudo que existir sobre o empreendimento imobiliário chamado '${data.nome}', preferencialmente na região de São José dos Campos, Jacareí ou Caçapava no interior de São Paulo. Retorne todas as informações encontradas no formato solicitado.`;
 
     const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -381,7 +398,7 @@ export const adicionarManual = createServerFn({ method: "POST" })
       ? parsed.tipo
       : "loteamento";
 
-    const client = sb();
+    const client = sb(context.accessToken);
     const descricao = parsed.descricao;
 
     const { data: inserted, error } = await client
