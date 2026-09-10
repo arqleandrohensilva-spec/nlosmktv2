@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { NL_OS_SUPABASE_ANON_KEY, NL_OS_SUPABASE_URL } from "./supabase-config";
 
 // Preços claude-sonnet-4-6: $3 / 1M input, $15 / 1M output
 const PRICE_INPUT = 3 / 1_000_000;
@@ -8,8 +9,8 @@ export const USD_BRL = 5.78;
 
 function serverClient() {
   return createClient(
-    "https://krzuroijejfozljhchok.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyenVyb2lqZWpmb3psamhjaG9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5Mjg4MjEsImV4cCI6MjA5MzUwNDgyMX0.mFMFfY8TdviFVzHvfKYUrZENpcT4wdyW-52-CUNqsOo",
+    NL_OS_SUPABASE_URL,
+    NL_OS_SUPABASE_ANON_KEY,
     { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
   );
 }
