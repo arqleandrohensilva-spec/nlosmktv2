@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { getRequest } from "@tanstack/react-start/server";
 import { supabaseExternal } from "@/lib/supabaseExternal";
-import { logAnthropicUsage } from "./uso-ia.server";
+import { logAnthropicUsage, logGeminiUsage } from "./uso-ia.server";
 
 // Client middleware forwards the external Supabase session token via sendContext,
 // so the server always has it regardless of how global middleware serializes headers.
