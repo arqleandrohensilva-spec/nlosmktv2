@@ -2,13 +2,14 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { logFixedUsage } from "./uso-ia.server";
+import { NL_OS_SUPABASE_ANON_KEY, NL_OS_SUPABASE_URL } from "./supabase-config";
 
 const CONFIG_KEY = "make_webhook_url";
 
 function serverClient() {
   return createClient(
-    "https://krzuroijejfozljhchok.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyenVyb2lqZWpmb3psamhjaG9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5Mjg4MjEsImV4cCI6MjA5MzUwNDgyMX0.mFMFfY8TdviFVzHvfKYUrZENpcT4wdyW-52-CUNqsOo",
+    NL_OS_SUPABASE_URL,
+    NL_OS_SUPABASE_ANON_KEY,
     { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
   );
 }

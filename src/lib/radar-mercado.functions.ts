@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { getRequest } from "@tanstack/react-start/server";
 import { supabaseExternal } from "@/lib/supabaseExternal";
 import { logAnthropicUsage, logGeminiUsage } from "./uso-ia.server";
+import { NL_OS_SUPABASE_ANON_KEY, NL_OS_SUPABASE_URL } from "./supabase-config";
 
 // Client middleware forwards the external Supabase session token via sendContext,
 // so the server always has it regardless of how global middleware serializes headers.
@@ -23,8 +24,8 @@ function sb(accessToken?: string | null) {
     } catch {}
   }
   return createClient(
-    "https://krzuroijejfozljhchok.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyenVyb2lqZWpmb3psamhjaG9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5Mjg4MjEsImV4cCI6MjA5MzUwNDgyMX0.mFMFfY8TdviFVzHvfKYUrZENpcT4wdyW-52-CUNqsOo",
+    NL_OS_SUPABASE_URL,
+    NL_OS_SUPABASE_ANON_KEY,
     {
       auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
       global: authHeader ? { headers: { Authorization: authHeader } } : undefined,
