@@ -263,34 +263,8 @@ type LancamentoBruto = {
 export const buscarLancamentos = createServerFn({ method: "POST" })
   .middleware([withExternalAuth])
   .handler(async ({ context }) => {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey(),
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 4000,
-      tools: [{ type: "web_search_20250305", name: "web_search" }],
-      system: SYSTEM_PROMPT_BUSCA,
-      messages: [{ role: "user", content: USER_PROMPT_BUSCA }],
-    }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    if (res.status === 429) throw new Error("Limite de requisições atingido. Tente novamente em instantes.");
-    if (res.status === 402) throw new Error("Créditos de IA esgotados.");
-    throw new Error(`Falha na IA (${res.status}): ${body.slice(0, 300)}`);
-  }
-
-  const json = await res.json();
-  const blocks: Array<{ type: string; text?: string }> = json?.content ?? [];
-  const finalText = blocks.filter((b) => b.type === "text").map((b) => b.text ?? "").join("\n").trim();
-
-  const parsed = extractJson<{ lancamentos: LancamentoBruto[]; resumo: string }>(finalText);
+  const pesquisa = await pesquisarWeb(SYSTEM_PROMPT_BUSCA, USER_PROMPT_BUSCA);
+  const parsed = extractJson<{ lancamentos: LancamentoBruto[]; resumo: string }>(pesquisa.text);
   const lista = Array.isArray(parsed.lancamentos) ? parsed.lancamentos : [];
 
   const client = sb(context.accessToken);
