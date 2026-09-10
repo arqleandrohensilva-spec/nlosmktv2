@@ -30,36 +30,58 @@ type IaResult = { text: string; inTok: number; outTok: number };
 // tanto o formato antigo "AIza..." quanto o novo "AQ...").
 const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || "gemini-3.6-flash";
 async function chamarGemini(key: string, system: string, prompt: string): Promise<IaResult> {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: system }] },
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 4000,
-          responseMimeType: "application/json",
-        },
-      }),
+  const body = JSON.stringify({
+    systemInstruction: { parts: [{ text: system }] },
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 4000,
+      responseMimeType: "application/json",
     },
-  );
-  if (!res.ok) {
-    const body = await res.text();
-    if (res.status === 429) throw new Error("Limite de requisições do Gemini atingido. Tente novamente em instantes.");
-    if (res.status === 400 || res.status === 403) throw new Error(`Chave do Gemini inválida ou sem permissão (${res.status}).`);
-    throw new Error(`Falha na IA Gemini (${res.status}): ${body.slice(0, 200)}`);
+  });
+
+  const MAX_TENTATIVAS = 4;
+  let ultimoStatus = 0;
+  for (let tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa++) {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+        body,
+      },
+    );
+
+    if (res.ok) {
+      const json = await res.json();
+      const parts: Array<{ text?: string }> = json?.candidates?.[0]?.content?.parts ?? [];
+      const text = parts.map((p) => p?.text ?? "").join("").trim();
+      return {
+        text,
+        inTok: json?.usageMetadata?.promptTokenCount ?? 0,
+        outTok: json?.usageMetadata?.candidatesTokenCount ?? 0,
+      };
+    }
+
+    ultimoStatus = res.status;
+    const errBody = await res.text();
+
+    // 503 (sobrecarga) e 429 (limite) são transitórios: espera e tenta de novo.
+    if ((res.status === 503 || res.status === 429) && tentativa < MAX_TENTATIVAS) {
+      await new Promise((r) => setTimeout(r, 1500 * tentativa));
+      continue;
+    }
+    if (res.status === 400 || res.status === 403) {
+      throw new Error(`Chave do Gemini inválida ou sem permissão (${res.status}).`);
+    }
+    if (res.status !== 503 && res.status !== 429) {
+      throw new Error(`Falha na IA Gemini (${res.status}): ${errBody.slice(0, 200)}`);
+    }
   }
-  const json = await res.json();
-  const parts: Array<{ text?: string }> = json?.candidates?.[0]?.content?.parts ?? [];
-  const text = parts.map((p) => p?.text ?? "").join("").trim();
-  return {
-    text,
-    inTok: json?.usageMetadata?.promptTokenCount ?? 0,
-    outTok: json?.usageMetadata?.candidatesTokenCount ?? 0,
-  };
+  if (ultimoStatus === 429) {
+    throw new Error("Limite de requisições do Gemini atingido. Tente novamente em instantes.");
+  }
+  throw new Error("O Gemini está sobrecarregado agora (pico de demanda). Tente gerar novamente em alguns segundos.");
 }
 
 async function chamarClaude(key: string, system: string, prompt: string): Promise<IaResult> {
