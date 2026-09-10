@@ -493,7 +493,7 @@ export const adicionarManual = createServerFn({ method: "POST" })
         bairro: parsed.bairro,
         faixa_preco: parsed.faixa_preco,
         descricao,
-        url_fonte: parsed.url_fonte,
+        url_fonte: parsed.url_fonte ?? pesquisa.fontes[0]?.uri ?? null,
         data_lancamento: parsed.data_lancamento,
         status: "novo",
         notas: "Adicionado manualmente",
@@ -503,13 +503,14 @@ export const adicionarManual = createServerFn({ method: "POST" })
 
     if (error) throw new Error(`Falha ao salvar lançamento: ${error.message}`);
 
-    await logAnthropicUsage({
-      modulo: "radar-mercado",
+    if (inserted?.id) await salvarFontes(client, inserted.id, pesquisa.fontes);
+
+    await logPesquisa(pesquisa.provider, {
       operacao: "adicao_manual",
-      tokens_input: json?.usage?.input_tokens ?? 0,
-      tokens_output: json?.usage?.output_tokens ?? 0,
-      detalhes: { nome: data.nome },
+      tokens_input: pesquisa.tokens_input,
+      tokens_output: pesquisa.tokens_output,
+      detalhes: { nome: data.nome, fontes: pesquisa.fontes.length },
     });
 
-    return inserted;
+    return { ...inserted, fontes: pesquisa.fontes };
   });
