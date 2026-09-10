@@ -1,7 +1,6 @@
 import { createServerFn, createMiddleware } from "@tanstack/react-start";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
-import { getRequest } from "@tanstack/react-start/server";
 import { supabaseExternal } from "@/lib/supabaseExternal";
 import { NL_OS_SUPABASE_ANON_KEY, NL_OS_SUPABASE_URL } from "./supabase-config";
 import { readMarcaConfig, saveMarcaConfig, type MarcaConfig } from "./marca-cerebro.server";
@@ -17,12 +16,7 @@ export const withExternalAuth = createMiddleware({ type: "function" })
   .server(async ({ next, context }) => next({ context }));
 
 export function sb(accessToken?: string | null) {
-  let authHeader: string | undefined = accessToken ? `Bearer ${accessToken}` : undefined;
-  if (!authHeader) {
-    try {
-      authHeader = getRequest()?.headers.get("authorization") ?? undefined;
-    } catch {}
-  }
+  const authHeader: string | undefined = accessToken ? `Bearer ${accessToken}` : undefined;
   return createClient(NL_OS_SUPABASE_URL, NL_OS_SUPABASE_ANON_KEY, {
     auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
     global: authHeader ? { headers: { Authorization: authHeader } } : undefined,
