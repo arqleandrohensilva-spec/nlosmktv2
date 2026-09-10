@@ -122,6 +122,132 @@ function apiKey() {
   return k;
 }
 
+export type Fonte = { title: string; uri: string };
+
+const GEMINI_MODEL = "gemini-2.5-pro";
+
+function geminiKey() {
+  return process.env.GEMINI_API_KEY ?? null;
+}
+
+/**
+ * Chama o Gemini (AI Studio) com Google Search grounding — resultados reais
+ * indexados pelo Google, com as fontes citadas.
+ */
+async function callGeminiGrounded(system: string, prompt: string) {
+  const key = geminiKey();
+  if (!key) throw new Error("GEMINI_API_KEY não configurada.");
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        tools: [{ google_search: {} }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: 8192 },
+      }),
+    },
+  );
+
+  if (!res.ok) {
+    const body = await res.text();
+    if (res.status === 429) throw new Error("Limite de requisições do Gemini atingido. Tente novamente em instantes.");
+    if (res.status === 403) throw new Error("Chave do Gemini sem permissão para este modelo ou para o Google Search grounding.");
+    throw new Error(`Falha na IA Gemini (${res.status}): ${body.slice(0, 300)}`);
+  }
+
+  const json = await res.json();
+  const cand = json?.candidates?.[0];
+  const parts: Array<{ text?: string }> = cand?.content?.parts ?? [];
+  const text = parts.map((p) => p.text ?? "").join("\n").trim();
+
+  const chunks: Array<{ web?: { uri?: string; title?: string } }> =
+    cand?.groundingMetadata?.groundingChunks ?? [];
+  const fontes: Fonte[] = [];
+  for (const c of chunks) {
+    const uri = c?.web?.uri;
+    if (!uri || fontes.some((f) => f.uri === uri)) continue;
+    fontes.push({ title: c.web?.title ?? uri, uri });
+  }
+
+  return {
+    text,
+    fontes,
+    tokens_input: json?.usageMetadata?.promptTokenCount ?? 0,
+    tokens_output: json?.usageMetadata?.candidatesTokenCount ?? 0,
+  };
+}
+
+/** Chamada ao Claude com web_search — usada como fallback quando não há GEMINI_API_KEY. */
+async function callClaudeWebSearch(system: string, prompt: string) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey(),
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 4000,
+      tools: [{ type: "web_search_20250305", name: "web_search" }],
+      system,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    if (res.status === 429) throw new Error("Limite de requisições atingido. Tente novamente em instantes.");
+    if (res.status === 402) throw new Error("Créditos de IA esgotados.");
+    throw new Error(`Falha na IA (${res.status}): ${body.slice(0, 300)}`);
+  }
+
+  const json = await res.json();
+  const blocks: Array<{ type: string; text?: string }> = json?.content ?? [];
+  return {
+    text: blocks.filter((b) => b.type === "text").map((b) => b.text ?? "").join("\n").trim(),
+    fontes: [] as Fonte[],
+    tokens_input: json?.usage?.input_tokens ?? 0,
+    tokens_output: json?.usage?.output_tokens ?? 0,
+  };
+}
+
+/** Motor de pesquisa web do radar: Gemini + grounding quando disponível, senão Claude. */
+async function pesquisarWeb(system: string, prompt: string) {
+  if (geminiKey()) {
+    const r = await callGeminiGrounded(system, prompt);
+    return { ...r, provider: "gemini" as const };
+  }
+  const r = await callClaudeWebSearch(system, prompt);
+  return { ...r, provider: "anthropic" as const };
+}
+
+async function logPesquisa(
+  provider: "gemini" | "anthropic",
+  input: { operacao: string; tokens_input: number; tokens_output: number; detalhes?: Record<string, unknown> },
+) {
+  const log = provider === "gemini" ? logGeminiUsage : logAnthropicUsage;
+  await log({ modulo: "radar-mercado", ...input });
+}
+
+/** Salva as fontes citadas; ignora silenciosamente se a coluna `fontes` ainda não existir. */
+async function salvarFontes(
+  client: ReturnType<typeof sb>,
+  id: string,
+  fontes: Fonte[],
+) {
+  if (!fontes.length) return;
+  const { error } = await client
+    .from("mkt_lancamentos")
+    .update({ fontes: fontes.slice(0, 8) as never })
+    .eq("id", id);
+  if (error) console.warn("Não foi possível salvar fontes:", error.message);
+}
+
 type LancamentoBruto = {
   nome: string;
   tipo: string;
