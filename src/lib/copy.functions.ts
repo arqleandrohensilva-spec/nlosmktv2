@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { SYSTEM_PROMPT } from "./nl-brand";
+import { getEffectiveSystemPrompt } from "./marca-cerebro.server";
 import { logAnthropicUsage } from "./uso-ia.server";
 
 const Input = z.object({
@@ -46,6 +46,8 @@ export const gerarCopy = createServerFn({ method: "POST" })
       .filter(Boolean)
       .join("\n");
 
+    const systemPrompt = await getEffectiveSystemPrompt();
+
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -56,7 +58,7 @@ export const gerarCopy = createServerFn({ method: "POST" })
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
         max_tokens: 4000,
-        system: SYSTEM_PROMPT,
+        system: systemPrompt,
         messages: [{ role: "user", content: userPrompt }],
       }),
     });
