@@ -43,6 +43,29 @@ export async function logAnthropicUsage(input: LogAnthropicInput) {
   }
 }
 
+// Preços gemini-2.5-pro: $1.25 / 1M input, $10 / 1M output
+const GEMINI_PRICE_INPUT = 1.25 / 1_000_000;
+const GEMINI_PRICE_OUTPUT = 10 / 1_000_000;
+
+export async function logGeminiUsage(input: LogAnthropicInput) {
+  const { tokens_input, tokens_output } = input;
+  const custo_usd = tokens_input * GEMINI_PRICE_INPUT + tokens_output * GEMINI_PRICE_OUTPUT;
+  try {
+    await serverClient().from("mkt_uso_ia").insert({
+      modulo: input.modulo,
+      operacao: input.operacao,
+      tokens_input,
+      tokens_output,
+      custo_usd,
+      custo_brl: custo_usd * USD_BRL,
+      modelo: input.modelo ?? "gemini-2.5-pro",
+      detalhes: input.detalhes ?? null,
+    });
+  } catch (e) {
+    console.error("Falha ao registrar uso_ia (gemini):", e);
+  }
+}
+
 export async function logFixedUsage(input: {
   modulo: string;
   operacao: string;
