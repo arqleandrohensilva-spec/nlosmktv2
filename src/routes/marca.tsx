@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/page-header";
-import { LINHAS, FRASES_VALIDADAS, REGRAS_NUNCA } from "@/lib/nl-brand";
+import { LINHAS } from "@/lib/nl-brand";
+import { MarcaCerebroSection } from "@/components/marca-cerebro-section";
 
 export const Route = createFileRoute("/marca")({
   component: Marca,
@@ -16,28 +17,17 @@ const CORES = [
   { nome: "Cinza Divisória", hex: "#D1D1D1", uso: "Separadores, linhas de tabela" },
 ];
 
-const PERSONA = {
-  idade: "30–45 anos",
-  perfil: "Casado(a), muitos com filhos pequenos. Classe média — analistas, técnicos, servidores públicos, pequenos empreendedores.",
-  renda: "R$ 7.000 – R$ 15.000 / mês",
-  situacao: "No aluguel com terreno sem saber como começar, OU tem imóvel mas insatisfeito.",
-  desejo: "Sair do aluguel, ter casa própria com orgulho, espaço que reflita sua identidade.",
-  decisores: [
-    "Clareza em cada etapa do projeto",
-    "Segurança financeira ao longo da obra",
-    "Confiança no profissional",
-  ],
-};
-
 function Marca() {
   return (
     <>
       <PageHeader
-        eyebrow="Biblioteca de marca"
-        title="Régua NL Arquitetos"
-        description="Referência visual e verbal. Somente leitura — para consulta antes de qualquer peça."
+        eyebrow="Régua NL Arquitetos"
+        title="Marca"
+        description="Edite o cérebro verbal da marca (público, dores, tom, frases, regras) — a IA de copy usa isso ao gerar conteúdo. Abaixo, a identidade visual para consulta."
       />
       <div className="px-4 md:px-10 py-8 space-y-10">
+        <MarcaCerebroSection />
+
         <Section title="Paleta de cores">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {CORES.map((c) => (
@@ -78,17 +68,6 @@ function Marca() {
           </div>
         </Section>
 
-        <Section title="Persona — Cliente 7D">
-          <div className="border border-[color:var(--divisoria)] rounded-lg bg-[color:var(--bege)] p-6 space-y-3 text-sm">
-            <PersonaRow k="Idade" v={PERSONA.idade} />
-            <PersonaRow k="Perfil" v={PERSONA.perfil} />
-            <PersonaRow k="Renda" v={PERSONA.renda} />
-            <PersonaRow k="Situação" v={PERSONA.situacao} />
-            <PersonaRow k="Desejo" v={PERSONA.desejo} />
-            <PersonaRow k="Decisores" v={PERSONA.decisores.join(" · ")} />
-          </div>
-        </Section>
-
         <Section title="Linhas de negócio">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {LINHAS.map((l) => (
@@ -99,30 +78,6 @@ function Marca() {
               </div>
             ))}
           </div>
-        </Section>
-
-        <Section title="Frases validadas">
-          <ul className="space-y-3">
-            {FRASES_VALIDADAS.map((f) => (
-              <li
-                key={f}
-                className="border-l-2 border-[color:var(--bronze)] pl-4 italic text-[color:var(--graphite)] font-serif text-lg"
-              >
-                "{f}"
-              </li>
-            ))}
-          </ul>
-        </Section>
-
-        <Section title="Nunca fazer">
-          <ul className="space-y-2">
-            {REGRAS_NUNCA.map((r) => (
-              <li key={r} className="text-sm text-[color:var(--graphite)] flex items-start gap-2">
-                <span className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)] mt-1">✕</span>
-                <span>{r}</span>
-              </li>
-            ))}
-          </ul>
         </Section>
       </div>
     </>
@@ -137,14 +92,5 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       </div>
       {children}
     </section>
-  );
-}
-
-function PersonaRow({ k, v }: { k: string; v: string }) {
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-[140px_1fr] gap-1 md:gap-4">
-      <dt className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)]">{k.toUpperCase()}</dt>
-      <dd className="text-[color:var(--graphite)]">{v}</dd>
-    </div>
   );
 }
