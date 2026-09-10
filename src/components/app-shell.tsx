@@ -40,8 +40,8 @@ const navItems: NavEntry[] = [
     icon: Radar,
     children: [
       { label: "Radar de Concorrentes", to: "/concorrentes" },
-      { label: "Radar de Mercado", to: "/radar-mercado" },
-      { label: "Radar de Oportunidade", to: "/radar" },
+      { label: "Radar de Mercado (imóveis)", to: "/radar-mercado" },
+      { label: "Radar de Datas", to: "/radar" },
     ],
   },
   {
