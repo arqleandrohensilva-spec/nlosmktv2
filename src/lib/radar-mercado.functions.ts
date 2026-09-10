@@ -474,7 +474,7 @@ export const adicionarManual = createServerFn({ method: "POST" })
       descricao: string | null;
       url_fonte: string | null;
       data_lancamento: string | null;
-    }>(finalText);
+    }>(pesquisa.text);
 
     const tipo = ["loteamento", "condominio", "apartamento", "comercial"].includes(parsed.tipo)
       ? parsed.tipo
