@@ -281,19 +281,27 @@ export const buscarLancamentos = createServerFn({ method: "POST" })
     const tipo = ["loteamento", "condominio", "apartamento", "comercial"].includes(l.tipo)
       ? l.tipo
       : "loteamento";
-    const { error } = await client.from("mkt_lancamentos").insert({
-      nome: l.nome,
-      tipo,
-      cidade: l.cidade,
-      construtora: l.construtora,
-      bairro: l.bairro,
-      faixa_preco: l.faixa_preco,
-      descricao: l.descricao,
-      url_fonte: l.url_fonte,
-      data_lancamento: l.data_lancamento,
-      status: "novo",
-    });
-    if (!error) novos++;
+    const fonteCitada = l.url_fonte ?? pesquisa.fontes[0]?.uri ?? null;
+    const { data: inserido, error } = await client
+      .from("mkt_lancamentos")
+      .insert({
+        nome: l.nome,
+        tipo,
+        cidade: l.cidade,
+        construtora: l.construtora,
+        bairro: l.bairro,
+        faixa_preco: l.faixa_preco,
+        descricao: l.descricao,
+        url_fonte: fonteCitada,
+        data_lancamento: l.data_lancamento,
+        status: "novo",
+      })
+      .select("id")
+      .maybeSingle();
+    if (!error) {
+      novos++;
+      if (inserido?.id) await salvarFontes(client, inserido.id, pesquisa.fontes);
+    }
   }
 
   await client.from("mkt_radar_buscas").insert({
@@ -302,12 +310,11 @@ export const buscarLancamentos = createServerFn({ method: "POST" })
     resumo: parsed.resumo ?? null,
   });
 
-  await logAnthropicUsage({
-    modulo: "radar-mercado",
+  await logPesquisa(pesquisa.provider, {
     operacao: "busca_lancamentos",
-    tokens_input: json?.usage?.input_tokens ?? 0,
-    tokens_output: json?.usage?.output_tokens ?? 0,
-    detalhes: { encontrados: lista.length, novos },
+    tokens_input: pesquisa.tokens_input,
+    tokens_output: pesquisa.tokens_output,
+    detalhes: { encontrados: lista.length, novos, fontes: pesquisa.fontes.length },
   });
 
   return { total: lista.length, novos, resumo: parsed.resumo ?? "" };
