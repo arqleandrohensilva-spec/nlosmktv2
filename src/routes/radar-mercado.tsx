@@ -52,6 +52,7 @@ type Lancamento = {
     cta_prospeccao?: string;
   } | null;
   notas: string | null;
+  fontes?: { title: string; uri: string }[] | null;
 };
 
 type Busca = {
