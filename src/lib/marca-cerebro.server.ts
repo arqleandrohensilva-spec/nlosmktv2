@@ -1,9 +1,10 @@
 // Cérebro da marca (configurável pelo time em /configuracoes).
 // Guardado na tabela genérica mkt_configuracoes (chave/valor), como JSON,
 // e injetado no system prompt da IA de copy. Se vazio, cai no SYSTEM_PROMPT padrão.
-import { createClient } from "@supabase/supabase-js";
+// As funções recebem um SupabaseClient já autenticado (ver sb() em marca-config.functions),
+// pois as políticas RLS de mkt_configuracoes exigem o papel "authenticated".
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { SYSTEM_PROMPT } from "./nl-brand";
-import { NL_OS_SUPABASE_ANON_KEY, NL_OS_SUPABASE_URL } from "./supabase-config";
 
 const CONFIG_KEY = "marca_cerebro";
 
@@ -27,15 +28,9 @@ export const MARCA_CONFIG_VAZIA: MarcaConfig = {
   extra: "",
 };
 
-function serverClient() {
-  return createClient(NL_OS_SUPABASE_URL, NL_OS_SUPABASE_ANON_KEY, {
-    auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
-  });
-}
-
-export async function readMarcaConfig(): Promise<MarcaConfig> {
+export async function readMarcaConfig(sb: SupabaseClient): Promise<MarcaConfig> {
   try {
-    const { data } = await serverClient()
+    const { data } = await sb
       .from("mkt_configuracoes")
       .select("valor")
       .eq("chave", CONFIG_KEY)
@@ -48,22 +43,21 @@ export async function readMarcaConfig(): Promise<MarcaConfig> {
   }
 }
 
-export async function saveMarcaConfig(config: MarcaConfig): Promise<void> {
-  const s = serverClient();
+export async function saveMarcaConfig(sb: SupabaseClient, config: MarcaConfig): Promise<void> {
   const valor = JSON.stringify(config);
-  const { data: existente } = await s
+  const { data: existente } = await sb
     .from("mkt_configuracoes")
     .select("id")
     .eq("chave", CONFIG_KEY)
     .maybeSingle();
   if (existente?.id) {
-    const { error } = await s
+    const { error } = await sb
       .from("mkt_configuracoes")
       .update({ valor, updated_at: new Date().toISOString() })
       .eq("id", existente.id);
     if (error) throw new Error(error.message);
   } else {
-    const { error } = await s
+    const { error } = await sb
       .from("mkt_configuracoes")
       .insert({ chave: CONFIG_KEY, valor });
     if (error) throw new Error(error.message);
@@ -76,8 +70,8 @@ function bloco(label: string, valor: string): string {
 }
 
 // Monta o system prompt efetivo: base sólida + ajustes da marca configurados pelo time.
-export async function getEffectiveSystemPrompt(): Promise<string> {
-  const c = await readMarcaConfig();
+export async function getEffectiveSystemPrompt(sb: SupabaseClient): Promise<string> {
+  const c = await readMarcaConfig(sb);
   const ajustes = [
     bloco("Público-alvo", c.publico),
     bloco("Dores da persona", c.dores),

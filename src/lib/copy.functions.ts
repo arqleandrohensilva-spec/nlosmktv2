@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { getEffectiveSystemPrompt } from "./marca-cerebro.server";
+import { withExternalAuth, sb } from "./marca-config.functions";
 import { logAnthropicUsage } from "./uso-ia.server";
 
 const Input = z.object({
@@ -24,8 +25,9 @@ export type CopyOutput = {
 };
 
 export const gerarCopy = createServerFn({ method: "POST" })
+  .middleware([withExternalAuth])
   .inputValidator((input: unknown) => Input.parse(input))
-  .handler(async ({ data }): Promise<CopyOutput> => {
+  .handler(async ({ data, context }): Promise<CopyOutput> => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey || !apiKey.trim()) {
       throw new Error(
@@ -46,7 +48,7 @@ export const gerarCopy = createServerFn({ method: "POST" })
       .filter(Boolean)
       .join("\n");
 
-    const systemPrompt = await getEffectiveSystemPrompt();
+    const systemPrompt = await getEffectiveSystemPrompt(sb(context.accessToken));
 
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
