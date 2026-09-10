@@ -574,6 +574,30 @@ function Drawer({
             )}
           </div>
 
+          {lancamento.fontes && lancamento.fontes.length > 0 && (
+            <div className="border border-[color:var(--divisoria)] p-4 space-y-2">
+              <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)]">
+                FONTES CITADAS
+              </div>
+              <ul className="space-y-1">
+                {lancamento.fontes.map((f) => (
+                  <li key={f.uri}>
+                    <a
+                      href={f.uri}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-start gap-1 text-sm text-[color:var(--graphite)] hover:text-[color:var(--bronze)] hover:underline"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                      <span className="break-all">{f.title}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+
           <div className="border border-[color:var(--divisoria)] bg-[#FAF9F7] p-4 space-y-2">
             <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)]">
               OPORTUNIDADE NL
