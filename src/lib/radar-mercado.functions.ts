@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { getRequest } from "@tanstack/react-start/server";
 import { supabaseExternal } from "@/lib/supabaseExternal";
-import { logAnthropicUsage } from "./uso-ia.server";
+import { logAnthropicUsage, logGeminiUsage } from "./uso-ia.server";
 
 // Client middleware forwards the external Supabase session token via sendContext,
 // so the server always has it regardless of how global middleware serializes headers.
@@ -122,6 +122,132 @@ function apiKey() {
   return k;
 }
 
+export type Fonte = { title: string; uri: string };
+
+const GEMINI_MODEL = "gemini-2.5-pro";
+
+function geminiKey() {
+  return process.env.GEMINI_API_KEY ?? null;
+}
+
+/**
+ * Chama o Gemini (AI Studio) com Google Search grounding — resultados reais
+ * indexados pelo Google, com as fontes citadas.
+ */
+async function callGeminiGrounded(system: string, prompt: string) {
+  const key = geminiKey();
+  if (!key) throw new Error("GEMINI_API_KEY não configurada.");
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        tools: [{ google_search: {} }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: 8192 },
+      }),
+    },
+  );
+
+  if (!res.ok) {
+    const body = await res.text();
+    if (res.status === 429) throw new Error("Limite de requisições do Gemini atingido. Tente novamente em instantes.");
+    if (res.status === 403) throw new Error("Chave do Gemini sem permissão para este modelo ou para o Google Search grounding.");
+    throw new Error(`Falha na IA Gemini (${res.status}): ${body.slice(0, 300)}`);
+  }
+
+  const json = await res.json();
+  const cand = json?.candidates?.[0];
+  const parts: Array<{ text?: string }> = cand?.content?.parts ?? [];
+  const text = parts.map((p) => p.text ?? "").join("\n").trim();
+
+  const chunks: Array<{ web?: { uri?: string; title?: string } }> =
+    cand?.groundingMetadata?.groundingChunks ?? [];
+  const fontes: Fonte[] = [];
+  for (const c of chunks) {
+    const uri = c?.web?.uri;
+    if (!uri || fontes.some((f) => f.uri === uri)) continue;
+    fontes.push({ title: c.web?.title ?? uri, uri });
+  }
+
+  return {
+    text,
+    fontes,
+    tokens_input: json?.usageMetadata?.promptTokenCount ?? 0,
+    tokens_output: json?.usageMetadata?.candidatesTokenCount ?? 0,
+  };
+}
+
+/** Chamada ao Claude com web_search — usada como fallback quando não há GEMINI_API_KEY. */
+async function callClaudeWebSearch(system: string, prompt: string) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey(),
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 4000,
+      tools: [{ type: "web_search_20250305", name: "web_search" }],
+      system,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    if (res.status === 429) throw new Error("Limite de requisições atingido. Tente novamente em instantes.");
+    if (res.status === 402) throw new Error("Créditos de IA esgotados.");
+    throw new Error(`Falha na IA (${res.status}): ${body.slice(0, 300)}`);
+  }
+
+  const json = await res.json();
+  const blocks: Array<{ type: string; text?: string }> = json?.content ?? [];
+  return {
+    text: blocks.filter((b) => b.type === "text").map((b) => b.text ?? "").join("\n").trim(),
+    fontes: [] as Fonte[],
+    tokens_input: json?.usage?.input_tokens ?? 0,
+    tokens_output: json?.usage?.output_tokens ?? 0,
+  };
+}
+
+/** Motor de pesquisa web do radar: Gemini + grounding quando disponível, senão Claude. */
+async function pesquisarWeb(system: string, prompt: string) {
+  if (geminiKey()) {
+    const r = await callGeminiGrounded(system, prompt);
+    return { ...r, provider: "gemini" as const };
+  }
+  const r = await callClaudeWebSearch(system, prompt);
+  return { ...r, provider: "anthropic" as const };
+}
+
+async function logPesquisa(
+  provider: "gemini" | "anthropic",
+  input: { operacao: string; tokens_input: number; tokens_output: number; detalhes?: Record<string, unknown> },
+) {
+  const log = provider === "gemini" ? logGeminiUsage : logAnthropicUsage;
+  await log({ modulo: "radar-mercado", ...input });
+}
+
+/** Salva as fontes citadas; ignora silenciosamente se a coluna `fontes` ainda não existir. */
+async function salvarFontes(
+  client: ReturnType<typeof sb>,
+  id: string,
+  fontes: Fonte[],
+) {
+  if (!fontes.length) return;
+  const { error } = await client
+    .from("mkt_lancamentos")
+    .update({ fontes: fontes.slice(0, 8) as never })
+    .eq("id", id);
+  if (error) console.warn("Não foi possível salvar fontes:", error.message);
+}
+
 type LancamentoBruto = {
   nome: string;
   tipo: string;
@@ -137,34 +263,8 @@ type LancamentoBruto = {
 export const buscarLancamentos = createServerFn({ method: "POST" })
   .middleware([withExternalAuth])
   .handler(async ({ context }) => {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey(),
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 4000,
-      tools: [{ type: "web_search_20250305", name: "web_search" }],
-      system: SYSTEM_PROMPT_BUSCA,
-      messages: [{ role: "user", content: USER_PROMPT_BUSCA }],
-    }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    if (res.status === 429) throw new Error("Limite de requisições atingido. Tente novamente em instantes.");
-    if (res.status === 402) throw new Error("Créditos de IA esgotados.");
-    throw new Error(`Falha na IA (${res.status}): ${body.slice(0, 300)}`);
-  }
-
-  const json = await res.json();
-  const blocks: Array<{ type: string; text?: string }> = json?.content ?? [];
-  const finalText = blocks.filter((b) => b.type === "text").map((b) => b.text ?? "").join("\n").trim();
-
-  const parsed = extractJson<{ lancamentos: LancamentoBruto[]; resumo: string }>(finalText);
+  const pesquisa = await pesquisarWeb(SYSTEM_PROMPT_BUSCA, USER_PROMPT_BUSCA);
+  const parsed = extractJson<{ lancamentos: LancamentoBruto[]; resumo: string }>(pesquisa.text);
   const lista = Array.isArray(parsed.lancamentos) ? parsed.lancamentos : [];
 
   const client = sb(context.accessToken);
@@ -181,19 +281,27 @@ export const buscarLancamentos = createServerFn({ method: "POST" })
     const tipo = ["loteamento", "condominio", "apartamento", "comercial"].includes(l.tipo)
       ? l.tipo
       : "loteamento";
-    const { error } = await client.from("mkt_lancamentos").insert({
-      nome: l.nome,
-      tipo,
-      cidade: l.cidade,
-      construtora: l.construtora,
-      bairro: l.bairro,
-      faixa_preco: l.faixa_preco,
-      descricao: l.descricao,
-      url_fonte: l.url_fonte,
-      data_lancamento: l.data_lancamento,
-      status: "novo",
-    });
-    if (!error) novos++;
+    const fonteCitada = l.url_fonte ?? pesquisa.fontes[0]?.uri ?? null;
+    const { data: inserido, error } = await client
+      .from("mkt_lancamentos")
+      .insert({
+        nome: l.nome,
+        tipo,
+        cidade: l.cidade,
+        construtora: l.construtora,
+        bairro: l.bairro,
+        faixa_preco: l.faixa_preco,
+        descricao: l.descricao,
+        url_fonte: fonteCitada,
+        data_lancamento: l.data_lancamento,
+        status: "novo",
+      })
+      .select("id")
+      .maybeSingle();
+    if (!error) {
+      novos++;
+      if (inserido?.id) await salvarFontes(client, inserido.id, pesquisa.fontes);
+    }
   }
 
   await client.from("mkt_radar_buscas").insert({
@@ -202,12 +310,11 @@ export const buscarLancamentos = createServerFn({ method: "POST" })
     resumo: parsed.resumo ?? null,
   });
 
-  await logAnthropicUsage({
-    modulo: "radar-mercado",
+  await logPesquisa(pesquisa.provider, {
     operacao: "busca_lancamentos",
-    tokens_input: json?.usage?.input_tokens ?? 0,
-    tokens_output: json?.usage?.output_tokens ?? 0,
-    detalhes: { encontrados: lista.length, novos },
+    tokens_input: pesquisa.tokens_input,
+    tokens_output: pesquisa.tokens_output,
+    detalhes: { encontrados: lista.length, novos, fontes: pesquisa.fontes.length },
   });
 
   return { total: lista.length, novos, resumo: parsed.resumo ?? "" };
@@ -356,32 +463,7 @@ export const adicionarManual = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const userPrompt = `Pesquise na web tudo que existir sobre o empreendimento imobiliário chamado '${data.nome}', preferencialmente na região de São José dos Campos, Jacareí ou Caçapava no interior de São Paulo. Retorne todas as informações encontradas no formato solicitado.`;
 
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey(),
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 4000,
-        tools: [{ type: "web_search_20250305", name: "web_search" }],
-        system: SYSTEM_PROMPT_MANUAL,
-        messages: [{ role: "user", content: userPrompt }],
-      }),
-    });
-
-    if (!res.ok) {
-      const body = await res.text();
-      if (res.status === 429) throw new Error("Limite de requisições atingido.");
-      if (res.status === 402) throw new Error("Créditos de IA esgotados.");
-      throw new Error(`Falha na IA (${res.status}): ${body.slice(0, 300)}`);
-    }
-
-    const json = await res.json();
-    const blocks: Array<{ type: string; text?: string }> = json?.content ?? [];
-    const finalText = blocks.filter((b) => b.type === "text").map((b) => b.text ?? "").join("\n").trim();
+    const pesquisa = await pesquisarWeb(SYSTEM_PROMPT_MANUAL, userPrompt);
     const parsed = extractJson<{
       nome: string;
       tipo: string;
@@ -392,7 +474,7 @@ export const adicionarManual = createServerFn({ method: "POST" })
       descricao: string | null;
       url_fonte: string | null;
       data_lancamento: string | null;
-    }>(finalText);
+    }>(pesquisa.text);
 
     const tipo = ["loteamento", "condominio", "apartamento", "comercial"].includes(parsed.tipo)
       ? parsed.tipo
@@ -411,7 +493,7 @@ export const adicionarManual = createServerFn({ method: "POST" })
         bairro: parsed.bairro,
         faixa_preco: parsed.faixa_preco,
         descricao,
-        url_fonte: parsed.url_fonte,
+        url_fonte: parsed.url_fonte ?? pesquisa.fontes[0]?.uri ?? null,
         data_lancamento: parsed.data_lancamento,
         status: "novo",
         notas: "Adicionado manualmente",
@@ -421,13 +503,14 @@ export const adicionarManual = createServerFn({ method: "POST" })
 
     if (error) throw new Error(`Falha ao salvar lançamento: ${error.message}`);
 
-    await logAnthropicUsage({
-      modulo: "radar-mercado",
+    if (inserted?.id) await salvarFontes(client, inserted.id, pesquisa.fontes);
+
+    await logPesquisa(pesquisa.provider, {
       operacao: "adicao_manual",
-      tokens_input: json?.usage?.input_tokens ?? 0,
-      tokens_output: json?.usage?.output_tokens ?? 0,
-      detalhes: { nome: data.nome },
+      tokens_input: pesquisa.tokens_input,
+      tokens_output: pesquisa.tokens_output,
+      detalhes: { nome: data.nome, fontes: pesquisa.fontes.length },
     });
 
-    return inserted;
+    return { ...inserted, fontes: pesquisa.fontes };
   });
