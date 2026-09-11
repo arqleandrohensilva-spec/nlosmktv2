@@ -160,6 +160,7 @@ export const gerarCopy = createServerFn({ method: "POST" })
       data.ajuste_raciocinio ? `Ajuste solicitado no raciocínio: ${data.ajuste_raciocinio}` : "",
       data.imagem_contexto ? `Imagem de referência do projeto (descrição técnica): ${data.imagem_contexto}` : "",
       "",
+      "OBRIGATÓRIO: inclua TODOS os campos do schema, inclusive prompt_imagem (um prompt de imagem detalhado e específico para este post, pronto para colar no Google Flow/Imagen). Nunca omita prompt_imagem.",
       "Responda EXCLUSIVAMENTE com o objeto JSON. Sem texto antes, sem texto depois, sem markdown, sem blocos de código, sem explicação. Apenas o JSON puro começando com { e terminando com }.",
     ]
       .filter(Boolean)
