@@ -37,6 +37,7 @@ const Input = z.object({
   frases: z.string().max(8000).optional(),
   regras: z.string().max(8000).optional(),
   extra: z.string().max(20000).optional(),
+  imagem: z.string().max(8000).optional(),
 });
 
 export const salvarMarcaConfig = createServerFn({ method: "POST" })
@@ -51,6 +52,7 @@ export const salvarMarcaConfig = createServerFn({ method: "POST" })
       frases: (data.frases ?? "").toString(),
       regras: (data.regras ?? "").toString(),
       extra: (data.extra ?? "").toString(),
+      imagem: (data.imagem ?? "").toString(),
     };
     await saveMarcaConfig(sb(context.accessToken), config);
     return { ok: true };

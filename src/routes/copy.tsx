@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/lib/supabaseExternal";
 import { gerarCopy, type CopyOutput } from "@/lib/copy.functions";
 import { sugerirDorEPost, type SugestaoPost } from "@/lib/sugestao.functions";
+import { getMarcaConfig } from "@/lib/marca-config.functions";
 import { PageHeader } from "@/components/page-header";
 import { LINHAS, FORMATOS } from "@/lib/nl-brand";
 import { Loader2, Copy, AlertTriangle, Image as ImageIcon, X } from "lucide-react";
@@ -29,6 +30,7 @@ function MotorCopy() {
   const navigate = useNavigate();
   const gerar = useServerFn(gerarCopy);
   const sugerir = useServerFn(sugerirDorEPost);
+  const carregarMarca = useServerFn(getMarcaConfig);
   const queryClient = useQueryClient();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -58,6 +60,12 @@ function MotorCopy() {
       if (error) throw error;
       return data ?? [];
     },
+  });
+
+  const { data: marcaCfg } = useQuery({
+    queryKey: ["marca-config"],
+    queryFn: () => carregarMarca(),
+    staleTime: 60_000,
   });
 
   const { data: dores } = useQuery({
@@ -233,9 +241,14 @@ function MotorCopy() {
     onError: (err: any) => toast.error(err?.message ?? "Erro ao salvar"),
   });
 
-  const promptImagem = output
+  const diretrizesImagem = (marcaCfg?.imagem ?? "").trim();
+  const promptBaseImagem = output
     ? (output.prompt_imagem?.trim() || promptImagemFlow(output, linha, dorSelecionada?.titulo))
     : "";
+  const promptImagem =
+    promptBaseImagem && diretrizesImagem
+      ? `${promptBaseImagem}\n\nInstruções do agente de imagem: ${diretrizesImagem}`
+      : promptBaseImagem;
 
   return (
     <>

@@ -16,6 +16,7 @@ export type MarcaConfig = {
   frases: string;
   regras: string;
   extra: string;
+  imagem: string; // instruções/referências para o agente que gera as imagens
 };
 
 export const MARCA_CONFIG_VAZIA: MarcaConfig = {
@@ -26,6 +27,7 @@ export const MARCA_CONFIG_VAZIA: MarcaConfig = {
   frases: "",
   regras: "",
   extra: "",
+  imagem: "",
 };
 
 export async function readMarcaConfig(sb: SupabaseClient): Promise<MarcaConfig> {
@@ -80,6 +82,7 @@ export async function getEffectiveSystemPrompt(sb: SupabaseClient): Promise<stri
     bloco("Frases validadas", c.frases),
     bloco("Regras — nunca fazer", c.regras),
     bloco("Conhecimento adicional da marca", c.extra),
+    bloco("Instruções para o agente de imagem (use no campo prompt_imagem)", c.imagem),
   ].join("");
   if (!ajustes.trim()) return SYSTEM_PROMPT;
   return `${SYSTEM_PROMPT}\n\n--- AJUSTES DA MARCA (configurados pelo time — PRIORIZE estes sobre o padrão acima) ---${ajustes}`;
