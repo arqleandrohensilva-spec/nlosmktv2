@@ -150,8 +150,12 @@ function RadarMercadoPage() {
     onSuccess: async (r) => {
       setLoadingStage("idle");
       toast.success(`${r.novos} novos lançamento(s) detectado(s) de ${r.total} encontrado(s).`);
-      await qc.invalidateQueries({ queryKey: ["lancamentos"] });
-      await qc.invalidateQueries({ queryKey: ["radar_buscas"] });
+      // refetchQueries (em vez de invalidate) força a lista a recarregar na hora,
+      // sem depender de F5.
+      await Promise.all([
+        qc.refetchQueries({ queryKey: ["lancamentos"] }),
+        qc.refetchQueries({ queryKey: ["radar_buscas"] }),
+      ]);
     },
     onError: (e: unknown) => {
       setLoadingStage("idle");
@@ -187,7 +191,7 @@ function RadarMercadoPage() {
       setManualStage("idle");
       setManualOpen(false);
       toast.success("Lançamento adicionado.");
-      await qc.invalidateQueries({ queryKey: ["lancamentos"] });
+      await qc.refetchQueries({ queryKey: ["lancamentos"] });
       if (row) setAberto(row as Lancamento);
     },
     onError: (e: unknown) => {
