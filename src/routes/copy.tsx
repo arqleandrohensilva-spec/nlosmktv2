@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabaseExternal";
 import { gerarCopy, type CopyOutput } from "@/lib/copy.functions";
 import { sugerirDorEPost, type SugestaoPost } from "@/lib/sugestao.functions";
 import { getMarcaConfig } from "@/lib/marca-config.functions";
+import { gerarPromptImagem } from "@/lib/imagem.functions";
 import { PageHeader } from "@/components/page-header";
 import { LINHAS, FORMATOS } from "@/lib/nl-brand";
 import { Loader2, Copy, AlertTriangle, Image as ImageIcon, X } from "lucide-react";
@@ -31,6 +32,7 @@ function MotorCopy() {
   const gerar = useServerFn(gerarCopy);
   const sugerir = useServerFn(sugerirDorEPost);
   const carregarMarca = useServerFn(getMarcaConfig);
+  const gerarPrompt = useServerFn(gerarPromptImagem);
   const queryClient = useQueryClient();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -45,6 +47,8 @@ function MotorCopy() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [projetoNLOS, setProjetoNLOS] = useState<string>("");
   const [sugestao, setSugestao] = useState<SugestaoPost | null>(null);
+  const [instrucoesImagem, setInstrucoesImagem] = useState("");
+  const [promptGerado, setPromptGerado] = useState<string | null>(null);
 
   // Ponte NL OS → MKT: contextos de projeto enviados pelo botão "Enviar para o
   // Marketing" do NL OS (tabela compartilhada contexto_marketing_ativo).
@@ -193,9 +197,26 @@ function MotorCopy() {
     },
     onSuccess: (data) => {
       setOutput(data);
+      setPromptGerado(null);
+      setInstrucoesImagem("");
       setStep(3);
     },
     onError: (err: any) => toast.error(err?.message ?? "Erro ao gerar copy"),
+  });
+
+  const gerarPromptMut = useMutation({
+    mutationFn: async () =>
+      gerarPrompt({
+        data: {
+          linha,
+          dor_titulo: dorSelecionada?.titulo,
+          briefing_visual: output?.briefing_visual,
+          legenda: output?.copy_legenda,
+          instrucoes: instrucoesImagem || undefined,
+        },
+      }),
+    onSuccess: (r) => setPromptGerado(r.prompt),
+    onError: (e: any) => toast.error(e?.message ?? "Falha ao gerar prompt de imagem."),
   });
 
   const salvar = useMutation({
@@ -249,6 +270,7 @@ function MotorCopy() {
     promptBaseImagem && diretrizesImagem
       ? `${promptBaseImagem}\n\nInstruções do agente de imagem: ${diretrizesImagem}`
       : promptBaseImagem;
+  const promptFinal = promptGerado?.trim() || promptImagem;
 
   return (
     <>
@@ -505,12 +527,52 @@ function MotorCopy() {
               <p className="whitespace-pre-wrap">{output.briefing_visual}</p>
             </Block>
 
-            {promptImagem && (
-              <Block title="Prompt de imagem (para o Flow)" copyable={promptImagem}>
-                <p className="whitespace-pre-wrap">{promptImagem}</p>
-                <p className="mt-3 text-xs text-[color:var(--muted-foreground)]">
-                  Copie este prompt e cole no Google Flow (ou outro gerador) para criar a imagem no
-                  tema do post. Depois baixe a imagem e use "Enviar imagem" no Agendar publicação.
+            {output && (
+              <Block title="Prompt de imagem (para o Flow)">
+                <label className="block">
+                  <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)] mb-2">
+                    INSTRUÇÕES PARA ESTA IMAGEM (OPCIONAL)
+                  </div>
+                  <textarea
+                    value={instrucoesImagem}
+                    onChange={(e) => setInstrucoesImagem(e.target.value)}
+                    rows={3}
+                    placeholder="O que ESTA imagem deve mostrar: ângulo, ambiente, clima, materiais, referência específica, o que incluir/evitar…"
+                    className="w-full rounded-[4px] border border-[color:var(--divisoria)] bg-[color:var(--gelo)] px-3 py-2 text-sm focus:outline-none focus:border-[color:var(--bronze)] resize-y"
+                  />
+                </label>
+                <div className="mt-3">
+                  <PrimaryButton disabled={gerarPromptMut.isPending} onClick={() => gerarPromptMut.mutate()}>
+                    {gerarPromptMut.isPending ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" /> Gerando prompt…</>
+                    ) : promptGerado ? (
+                      "Gerar outra versão"
+                    ) : (
+                      "Gerar prompt da imagem"
+                    )}
+                  </PrimaryButton>
+                </div>
+                {promptFinal && (
+                  <div className="mt-4 border border-[color:var(--divisoria)] rounded-[4px] bg-[color:var(--gelo)] p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)]">
+                        {promptGerado ? "PROMPT DO AGENTE" : "PROMPT BASE"}
+                      </div>
+                      <button
+                        onClick={() => copyText(promptFinal)}
+                        className="text-[color:var(--travertino)] hover:text-[color:var(--bronze)]"
+                        aria-label="Copiar prompt"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <p className="whitespace-pre-wrap text-sm text-[color:var(--graphite)]">{promptFinal}</p>
+                  </div>
+                )}
+                <p className="mt-2 text-xs text-[color:var(--muted-foreground)]">
+                  Escreva instruções e clique em "Gerar prompt da imagem" — o agente monta um prompt sob
+                  medida pra este post. Copie, cole no Google Flow, baixe a imagem e use "Enviar imagem"
+                  no Agendar publicação.
                 </p>
               </Block>
             )}
@@ -562,7 +624,7 @@ function MotorCopy() {
               <SecondaryButton onClick={() => copyText(output.copy_legenda)}>
                 <Copy className="h-4 w-4" /> Copiar legenda
               </SecondaryButton>
-              <SecondaryButton onClick={() => { setOutput(null); setStep(1); }}>
+              <SecondaryButton onClick={() => { setOutput(null); setPromptGerado(null); setInstrucoesImagem(""); setStep(1); }}>
                 Novo post
               </SecondaryButton>
             </div>
