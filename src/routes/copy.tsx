@@ -233,6 +233,10 @@ function MotorCopy() {
     onError: (err: any) => toast.error(err?.message ?? "Erro ao salvar"),
   });
 
+  const promptImagem = output
+    ? (output.prompt_imagem?.trim() || promptImagemFlow(output, linha, dorSelecionada?.titulo))
+    : "";
+
   return (
     <>
       <PageHeader
@@ -488,9 +492,9 @@ function MotorCopy() {
               <p className="whitespace-pre-wrap">{output.briefing_visual}</p>
             </Block>
 
-            {output.prompt_imagem && (
-              <Block title="Prompt de imagem (para o Flow)" copyable={output.prompt_imagem}>
-                <p className="whitespace-pre-wrap">{output.prompt_imagem}</p>
+            {promptImagem && (
+              <Block title="Prompt de imagem (para o Flow)" copyable={promptImagem}>
+                <p className="whitespace-pre-wrap">{promptImagem}</p>
                 <p className="mt-3 text-xs text-[color:var(--muted-foreground)]">
                   Copie este prompt e cole no Google Flow (ou outro gerador) para criar a imagem no
                   tema do post. Depois baixe a imagem e use "Enviar imagem" no Agendar publicação.
@@ -559,6 +563,29 @@ function MotorCopy() {
       />
     </>
   );
+}
+
+// Monta um prompt de imagem pro Flow a partir da copy — não depende da IA
+// devolver o campo prompt_imagem (garante que o bloco sempre apareça).
+function promptImagemFlow(out: CopyOutput, linha: string, dorTitulo?: string): string {
+  const linhaDesc: Record<string, string> = {
+    A: "arquitetura residencial",
+    B: "design de interiores",
+    AB: "arquitetura e interiores integrados",
+    C: "arquitetura comercial",
+  };
+  const desc = linhaDesc[linha] || "arquitetura";
+  return [
+    `Fotografia arquitetônica editorial de ${desc}${dorTitulo ? `, no tema: ${dorTitulo}` : ""}.`,
+    out.briefing_visual ? `Cena: ${out.briefing_visual}` : "",
+    "Enquadramento vertical 4:5 para feed, composição elegante e minimalista.",
+    "Iluminação natural suave, clima sofisticado e acolhedor.",
+    "Paleta NL: tons grafite, bronze mineral, bege areia e neutros quentes — nunca preto puro.",
+    "Materiais e acabamentos nobres, realista, alta qualidade.",
+    "Sem texto, sem palavras, sem logotipos.",
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 function contextoProjetoTexto(c: any): string {
