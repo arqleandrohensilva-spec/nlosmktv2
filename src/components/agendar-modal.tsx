@@ -43,6 +43,7 @@ export function AgendarModal({
   kind = "projeto",
   origem,
   postId,
+  imageUrl,
   onScheduled,
 }: {
   open: boolean;
@@ -51,6 +52,7 @@ export function AgendarModal({
   kind?: Kind;
   origem?: string;
   postId?: string;
+  imageUrl?: string;
   onScheduled?: () => void;
 }) {
   const agendar = useServerFn(agendarViaWebhook);
@@ -64,9 +66,9 @@ export function AgendarModal({
     if (open) {
       setTexto(initialText);
       setQuando(toLocalInput(nextSuggestion(kind)));
-      setImagem(null);
+      setImagem(imageUrl ? { url: imageUrl, nome: "Imagem gerada pela IA" } : null);
     }
-  }, [open, initialText, kind]);
+  }, [open, initialText, kind, imageUrl]);
 
   const iso = useMemo(() => {
     if (!quando) return "";
@@ -233,6 +235,7 @@ export function AgendarButton({
   kind,
   origem,
   postId,
+  imageUrl,
   label = "Agendar publicação",
   variant = "primary",
   className = "",
@@ -241,6 +244,7 @@ export function AgendarButton({
   kind?: Kind;
   origem?: string;
   postId?: string;
+  imageUrl?: string;
   label?: string;
   variant?: "primary" | "secondary" | "chip";
   className?: string;
@@ -270,6 +274,7 @@ export function AgendarButton({
         kind={kind}
         origem={origem}
         postId={postId}
+        imageUrl={imageUrl}
       />
     </>
   );
