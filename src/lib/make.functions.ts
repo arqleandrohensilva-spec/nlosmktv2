@@ -1,22 +1,17 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { createClient } from "@supabase/supabase-js";
+import { withExternalAuth, sb } from "./marca-config.functions";
 import { logFixedUsage } from "./uso-ia.server";
-import { NL_OS_SUPABASE_ANON_KEY, NL_OS_SUPABASE_URL } from "./supabase-config";
 
 const CONFIG_KEY = "make_webhook_url";
 
-function serverClient() {
-  return createClient(
-    NL_OS_SUPABASE_URL,
-    NL_OS_SUPABASE_ANON_KEY,
-    { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
-  );
-}
+type Sb = ReturnType<typeof sb>;
 
-async function readWebhookUrl(): Promise<string | null> {
+// Lê a URL do webhook usando um client JÁ autenticado (a RLS de mkt_configuracoes
+// exige o papel authenticated — client anon é bloqueado).
+async function readWebhookUrl(client: Sb): Promise<string | null> {
   try {
-    const { data } = await serverClient()
+    const { data } = await client
       .from("mkt_configuracoes")
       .select("valor")
       .eq("chave", CONFIG_KEY)
@@ -28,22 +23,23 @@ async function readWebhookUrl(): Promise<string | null> {
   }
 }
 
-export const statusWebhookMake = createServerFn({ method: "GET" }).handler(
-  async (): Promise<{ configured: boolean; url_preview?: string }> => {
-    const url = await readWebhookUrl();
+export const statusWebhookMake = createServerFn({ method: "GET" })
+  .middleware([withExternalAuth])
+  .handler(async ({ context }): Promise<{ configured: boolean; url_preview?: string }> => {
+    const url = await readWebhookUrl(sb(context.accessToken));
     if (!url) return { configured: false };
-    // Return only a short preview so the UI can confirm without leaking full URL
+    // Retorna só um preview curto pra UI confirmar sem vazar a URL inteira.
     const preview = url.length > 40 ? `${url.slice(0, 32)}…${url.slice(-6)}` : url;
     return { configured: true, url_preview: preview };
-  },
-);
+  });
 
 export const salvarWebhookMake = createServerFn({ method: "POST" })
+  .middleware([withExternalAuth])
   .inputValidator((input: unknown) =>
     z.object({ url: z.string().url().min(8) }).parse(input),
   )
-  .handler(async ({ data }) => {
-    const s = serverClient();
+  .handler(async ({ data, context }) => {
+    const s = sb(context.accessToken);
     const { data: existente } = await s
       .from("mkt_configuracoes")
       .select("id")
@@ -65,11 +61,12 @@ export const salvarWebhookMake = createServerFn({ method: "POST" })
   });
 
 export const testarWebhookMake = createServerFn({ method: "POST" })
+  .middleware([withExternalAuth])
   .inputValidator((input: unknown) =>
     z.object({ url: z.string().url().optional() }).parse(input ?? {}),
   )
-  .handler(async ({ data }): Promise<{ ok: boolean; status: number; message: string }> => {
-    const url = data.url?.trim() || (await readWebhookUrl());
+  .handler(async ({ data, context }): Promise<{ ok: boolean; status: number; message: string }> => {
+    const url = data.url?.trim() || (await readWebhookUrl(sb(context.accessToken)));
     if (!url) return { ok: false, status: 0, message: "Webhook do Make não configurado." };
     try {
       const res = await fetch(url, {
@@ -94,6 +91,7 @@ export const testarWebhookMake = createServerFn({ method: "POST" })
   });
 
 export const agendarViaWebhook = createServerFn({ method: "POST" })
+  .middleware([withExternalAuth])
   .inputValidator((input: unknown) =>
     z
       .object({
@@ -107,9 +105,10 @@ export const agendarViaWebhook = createServerFn({ method: "POST" })
       })
       .parse(input),
   )
-  .handler(async ({ data }) => {
-    const url = await readWebhookUrl();
-    if (!url) throw new Error("Webhook do Make não configurado. Configure em /configuracoes.");
+  .handler(async ({ data, context }) => {
+    const client = sb(context.accessToken);
+    const url = await readWebhookUrl(client);
+    if (!url) throw new Error("Webhook do Make não configurado. Configure em Configurações → Integrações.");
 
     const iso = new Date(data.data_hora).toISOString();
     if (!iso || iso === "Invalid Date") throw new Error("Data/hora inválida.");
@@ -146,7 +145,7 @@ export const agendarViaWebhook = createServerFn({ method: "POST" })
 
     if (data.post_id) {
       try {
-        await serverClient()
+        await client
           .from("mkt_posts")
           .update({ status: "agendado" })
           .eq("id", data.post_id);
