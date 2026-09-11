@@ -1,9 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/lib/supabaseExternal";
 import { gerarCopy, type CopyOutput } from "@/lib/copy.functions";
+import { sugerirDorEPost, type SugestaoPost } from "@/lib/sugestao.functions";
 import { PageHeader } from "@/components/page-header";
 import { LINHAS, FORMATOS } from "@/lib/nl-brand";
 import { Loader2, Copy, AlertTriangle, Image as ImageIcon, X } from "lucide-react";
@@ -27,6 +28,8 @@ function MotorCopy() {
   const search = Route.useSearch();
   const navigate = useNavigate();
   const gerar = useServerFn(gerarCopy);
+  const sugerir = useServerFn(sugerirDorEPost);
+  const queryClient = useQueryClient();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [linha, setLinha] = useState<string>(search.linha ?? "A");
@@ -39,6 +42,7 @@ function MotorCopy() {
   const [imagem, setImagem] = useState<BibliotecaImagemLite | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [projetoNLOS, setProjetoNLOS] = useState<string>("");
+  const [sugestao, setSugestao] = useState<SugestaoPost | null>(null);
 
   // Ponte NL OS → MKT: contextos de projeto enviados pelo botão "Enviar para o
   // Marketing" do NL OS (tabela compartilhada contexto_marketing_ativo).
@@ -118,6 +122,51 @@ function MotorCopy() {
       ? `Esta dor não é atacada há ${dias} dias. Boa hora para retomar.`
       : null;
   }, [dorSelecionada]);
+
+  const sugestaoMut = useMutation({
+    mutationFn: async (c: any) =>
+      sugerir({
+        data: {
+          projeto_id: c.projeto_id ?? undefined,
+          cliente: c.cliente ?? undefined,
+          tipo: c.tipo ?? undefined,
+        },
+      }),
+    onSuccess: (s) => setSugestao(s),
+    onError: (e: any) => toast.error(e?.message ?? "Não foi possível gerar a sugestão."),
+  });
+
+  const cadastrarDorMut = useMutation({
+    mutationFn: async (s: SugestaoPost) => {
+      const { data, error } = await supabase
+        .from("mkt_dores")
+        .insert({
+          titulo: s.dor_titulo,
+          categoria: s.dor_categoria || "geral",
+          descricao: s.dor_descricao || null,
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      return data as { id: string };
+    },
+    onSuccess: async (novo) => {
+      await queryClient.invalidateQueries({ queryKey: ["dores"] });
+      setDorId(novo.id);
+      setSugestao((prev) => (prev ? { ...prev, dor_nova: false, dor_existente_id: novo.id } : prev));
+      toast.success("Dor cadastrada e selecionada.");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Falha ao cadastrar a dor."),
+  });
+
+  function aplicarPostSugerido(s: SugestaoPost) {
+    setLinha(s.linha);
+    setFormato(s.formato);
+    if (s.gancho) {
+      setObservacao((o) => (o ? `${o}\nGancho sugerido: ${s.gancho}` : `Gancho sugerido: ${s.gancho}`));
+    }
+    toast.success("Sugestão aplicada ao post.");
+  }
 
   const gerarMut = useMutation({
     mutationFn: async () => {
@@ -234,11 +283,13 @@ function MotorCopy() {
                   value={projetoNLOS}
                   onChange={(id) => {
                     setProjetoNLOS(id);
+                    setSugestao(null);
                     const c = (projetosNLOS ?? []).find((p: any) => String(p.id) === id);
                     if (c) {
                       setObservacao(contextoProjetoTexto(c));
                       const l = tipoParaLinha(c.tipo);
                       if (l) setLinha(l);
+                      sugestaoMut.mutate(c);
                     }
                   }}
                 >
@@ -254,6 +305,79 @@ function MotorCopy() {
                   pré-preenche a observação e sugere a linha.
                 </p>
               </Field>
+            )}
+            {(sugestaoMut.isPending || sugestao) && (
+              <div className="border border-[color:var(--bronze)]/40 rounded-lg bg-[color:var(--bege)] p-5 space-y-4">
+                <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)]">
+                  SUGESTÃO DA IA
+                </div>
+                {sugestaoMut.isPending ? (
+                  <div className="flex items-center gap-2 text-sm text-[color:var(--muted-foreground)]">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Analisando o briefing do cliente…
+                  </div>
+                ) : sugestao ? (
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm text-[color:var(--muted-foreground)]">Dor identificada:</span>
+                        <span className="font-serif text-base text-[color:var(--graphite)]">{sugestao.dor_titulo}</span>
+                        <span
+                          className={[
+                            "font-mono text-[9px] tracking-widest uppercase px-2 py-0.5 rounded-full",
+                            sugestao.dor_nova
+                              ? "bg-[color:var(--bronze)] text-white"
+                              : "bg-white text-[color:var(--bronze)] border border-[color:var(--bronze)]/40",
+                          ].join(" ")}
+                        >
+                          {sugestao.dor_nova ? "nova" : "já cadastrada"}
+                        </span>
+                      </div>
+                      {sugestao.dor_descricao && (
+                        <p className="mt-1 text-xs text-[color:var(--muted-foreground)]">{sugestao.dor_descricao}</p>
+                      )}
+                      <div className="mt-2">
+                        {sugestao.dor_nova ? (
+                          <button
+                            disabled={cadastrarDorMut.isPending}
+                            onClick={() => cadastrarDorMut.mutate(sugestao)}
+                            className="inline-flex items-center gap-2 rounded-[4px] bg-[color:var(--graphite)] px-3 py-1.5 text-xs text-white hover:bg-[color:var(--bronze)] disabled:opacity-40"
+                          >
+                            {cadastrarDorMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                            Cadastrar e usar esta dor
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => sugestao.dor_existente_id && setDorId(sugestao.dor_existente_id)}
+                            className="inline-flex items-center gap-2 rounded-[4px] border border-[color:var(--divisoria)] bg-white px-3 py-1.5 text-xs text-[color:var(--graphite)] hover:border-[color:var(--bronze)]"
+                          >
+                            Usar esta dor
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-[color:var(--graphite)]">
+                        <span className="text-[color:var(--muted-foreground)]">Post potencial:</span>{" "}
+                        Linha {sugestao.linha} · {FORMATOS.find((f) => f.value === sugestao.formato)?.label ?? sugestao.formato}
+                      </div>
+                      {sugestao.gancho && (
+                        <p className="mt-1 text-sm italic text-[color:var(--graphite)]">"{sugestao.gancho}"</p>
+                      )}
+                      <button
+                        onClick={() => aplicarPostSugerido(sugestao)}
+                        className="mt-2 inline-flex items-center gap-2 rounded-[4px] border border-[color:var(--divisoria)] bg-white px-3 py-1.5 text-xs text-[color:var(--graphite)] hover:border-[color:var(--bronze)]"
+                      >
+                        Aplicar linha, formato e gancho
+                      </button>
+                    </div>
+                    {sugestao.justificativa && (
+                      <p className="border-t border-[color:var(--divisoria)] pt-3 text-xs leading-relaxed text-[color:var(--muted-foreground)]">
+                        {sugestao.justificativa}
+                      </p>
+                    )}
+                  </div>
+                ) : null}
+              </div>
             )}
             <Field label="Observação (opcional)">
               <textarea
