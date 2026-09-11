@@ -214,6 +214,96 @@ async function callGeminiGrounded(system: string, prompt: string) {
   };
 }
 
+/**
+ * Chamada ao Gemini SEM grounding (só geração de texto) — esta parte É gratuita
+ * no tier free. Usada para estruturar em JSON os resultados que vieram do Tavily.
+ */
+async function callGeminiText(system: string, prompt: string) {
+  const key = geminiKey();
+  if (!key) throw new Error("GEMINI_API_KEY não configurada.");
+
+  const body = JSON.stringify({
+    systemInstruction: { parts: [{ text: system }] },
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    generationConfig: { temperature: 0.3, maxOutputTokens: 8192, responseMimeType: "application/json" },
+  });
+
+  const MAX_TENTATIVAS = 4;
+  let res!: Response;
+  for (let tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa++) {
+    res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+        body,
+      },
+    );
+    if (res.ok) break;
+    if ((res.status === 429 || res.status === 503) && tentativa < MAX_TENTATIVAS) {
+      await new Promise((r) => setTimeout(r, 2000 * tentativa));
+      continue;
+    }
+    break;
+  }
+
+  if (!res.ok) {
+    const b = await res.text();
+    if (res.status === 429) throw new Error("Limite de requisições do Gemini atingido. Tente novamente em instantes.");
+    throw new Error(`Falha na IA Gemini (${res.status}): ${b.slice(0, 250)}`);
+  }
+
+  const json = await res.json();
+  const parts: Array<{ text?: string }> = json?.candidates?.[0]?.content?.parts ?? [];
+  return {
+    text: parts.map((p) => p?.text ?? "").join("").trim(),
+    tokens_input: json?.usageMetadata?.promptTokenCount ?? 0,
+    tokens_output: json?.usageMetadata?.candidatesTokenCount ?? 0,
+  };
+}
+
+/**
+ * Busca real na web via Tavily (tier gratuito, sem cartão). Retorna um bloco de
+ * contexto com os trechos encontrados + as fontes citadas.
+ */
+async function tavilySearch(queries: string[]): Promise<{ contexto: string; fontes: Fonte[] }> {
+  const key = process.env.TAVILY_API_KEY?.trim();
+  if (!key) throw new Error("TAVILY_API_KEY não configurada.");
+
+  const fontes: Fonte[] = [];
+  const blocos: string[] = [];
+
+  for (const q of queries) {
+    const res = await fetch("https://api.tavily.com/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+      body: JSON.stringify({
+        query: q,
+        max_results: 6,
+        search_depth: "advanced",
+        include_answer: true,
+      }),
+    });
+    if (!res.ok) {
+      const b = await res.text();
+      if (res.status === 401 || res.status === 403) {
+        throw new Error("Chave do Tavily inválida ou sem permissão. Confira a TAVILY_API_KEY.");
+      }
+      throw new Error(`Falha na busca (Tavily ${res.status}): ${b.slice(0, 200)}`);
+    }
+    const json = await res.json();
+    if (json?.answer) blocos.push(`Resumo da busca ("${q}"): ${json.answer}`);
+    const results: any[] = json?.results ?? [];
+    for (const r of results) {
+      const url = r?.url;
+      if (url && !fontes.some((f) => f.uri === url)) fontes.push({ title: r.title ?? url, uri: url });
+      blocos.push(`Fonte: ${r?.title ?? ""} (${url ?? ""})\n${String(r?.content ?? "").slice(0, 800)}`);
+    }
+  }
+
+  return { contexto: blocos.join("\n\n---\n\n").slice(0, 12000), fontes };
+}
+
 /** Chamada ao Claude com web_search — usada como fallback quando não há GEMINI_API_KEY. */
 async function callClaudeWebSearch(system: string, prompt: string) {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -249,12 +339,27 @@ async function callClaudeWebSearch(system: string, prompt: string) {
   };
 }
 
-/** Motor de pesquisa web do radar: Gemini + grounding quando disponível, senão Claude. */
-async function pesquisarWeb(system: string, prompt: string) {
+/**
+ * Motor de pesquisa web do radar. Ordem de preferência:
+ * 1) Tavily (busca grátis) + Gemini (organiza) — caminho gratuito, sem cartão;
+ * 2) Gemini com Google Search grounding — só funciona com billing ativo;
+ * 3) Claude web_search — fallback pago.
+ */
+async function pesquisarWeb(system: string, prompt: string, searchQueries: string[]) {
+  const temTavily = !!process.env.TAVILY_API_KEY?.trim();
+
+  if (temTavily && geminiKey()) {
+    const { contexto, fontes } = await tavilySearch(searchQueries);
+    const promptComContexto = `${prompt}\n\nRESULTADOS REAIS DA BUSCA NA WEB (use SOMENTE estes dados, não invente empreendimentos):\n${contexto || "(nenhum resultado encontrado)"}`;
+    const r = await callGeminiText(system, promptComContexto);
+    return { text: r.text, fontes, tokens_input: r.tokens_input, tokens_output: r.tokens_output, provider: "gemini" as const };
+  }
+
   if (geminiKey()) {
     const r = await callGeminiGrounded(system, prompt);
     return { ...r, provider: "gemini" as const };
   }
+
   const r = await callClaudeWebSearch(system, prompt);
   return { ...r, provider: "anthropic" as const };
 }
@@ -296,7 +401,12 @@ type LancamentoBruto = {
 export const buscarLancamentos = createServerFn({ method: "POST" })
   .middleware([withExternalAuth])
   .handler(async ({ context }) => {
-  const pesquisa = await pesquisarWeb(SYSTEM_PROMPT_BUSCA, USER_PROMPT_BUSCA);
+  const queriesBusca = [
+    "lançamentos imobiliários recentes São José dos Campos loteamento condomínio apartamento",
+    "novos empreendimentos Jacareí Caçapava loteamento condomínio lançamento",
+    "construtoras São José dos Campos lançamento residencial comercial recente",
+  ];
+  const pesquisa = await pesquisarWeb(SYSTEM_PROMPT_BUSCA, USER_PROMPT_BUSCA, queriesBusca);
   const parsed = extractJson<{ lancamentos: LancamentoBruto[]; resumo: string }>(pesquisa.text);
   const lista = Array.isArray(parsed.lancamentos) ? parsed.lancamentos : [];
 
@@ -496,7 +606,11 @@ export const adicionarManual = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const userPrompt = `Pesquise na web tudo que existir sobre o empreendimento imobiliário chamado '${data.nome}', preferencialmente na região de São José dos Campos, Jacareí ou Caçapava no interior de São Paulo. Retorne todas as informações encontradas no formato solicitado.`;
 
-    const pesquisa = await pesquisarWeb(SYSTEM_PROMPT_MANUAL, userPrompt);
+    const queriesManual = [
+      `${data.nome} empreendimento imobiliário São José dos Campos Jacareí Caçapava`,
+      `${data.nome} construtora lançamento preço bairro`,
+    ];
+    const pesquisa = await pesquisarWeb(SYSTEM_PROMPT_MANUAL, userPrompt, queriesManual);
     const parsed = extractJson<{
       nome: string;
       tipo: string;
