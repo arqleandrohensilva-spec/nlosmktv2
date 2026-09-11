@@ -38,6 +38,23 @@ function MotorCopy() {
   const [output, setOutput] = useState<CopyOutput | null>(null);
   const [imagem, setImagem] = useState<BibliotecaImagemLite | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [projetoNLOS, setProjetoNLOS] = useState<string>("");
+
+  // Ponte NL OS → MKT: contextos de projeto enviados pelo botão "Enviar para o
+  // Marketing" do NL OS (tabela compartilhada contexto_marketing_ativo).
+  const { data: projetosNLOS } = useQuery({
+    queryKey: ["contexto-marketing-nlos"],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      let q = supabase.from("contexto_marketing_ativo").select("*");
+      if (session?.user?.id) q = q.eq("user_id", session.user.id);
+      const { data, error } = await q
+        .order("created_at", { ascending: false })
+        .limit(15);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   const { data: dores } = useQuery({
     queryKey: ["dores"],
@@ -211,6 +228,33 @@ function MotorCopy() {
                   : `Baseado em ${perfPorDor?.totalPosts} posts publicados com performance registrada.`}
               </p>
             </Field>
+            {(projetosNLOS?.length ?? 0) > 0 && (
+              <Field label="Projeto do NL OS (opcional)">
+                <Select
+                  value={projetoNLOS}
+                  onChange={(id) => {
+                    setProjetoNLOS(id);
+                    const c = (projetosNLOS ?? []).find((p: any) => String(p.id) === id);
+                    if (c) {
+                      setObservacao(contextoProjetoTexto(c));
+                      const l = tipoParaLinha(c.tipo);
+                      if (l) setLinha(l);
+                    }
+                  }}
+                >
+                  <option value="">Nenhum — copy avulsa…</option>
+                  {(projetosNLOS ?? []).map((p: any) => (
+                    <option key={p.id} value={String(p.id)}>
+                      {p.cliente}{p.tipo ? ` · ${p.tipo}` : ""}{p.proxima_entrega ? ` · ${p.proxima_entrega}` : ""}
+                    </option>
+                  ))}
+                </Select>
+                <p className="mt-2 text-xs text-[color:var(--muted-foreground)]">
+                  Contextos enviados pelo botão "Enviar para o Marketing" no NL OS. Escolher um
+                  pré-preenche a observação e sugere a linha.
+                </p>
+              </Field>
+            )}
             <Field label="Observação (opcional)">
               <textarea
                 value={observacao}
@@ -380,6 +424,25 @@ function MotorCopy() {
       />
     </>
   );
+}
+
+function contextoProjetoTexto(c: any): string {
+  const partes = [
+    c.cliente ? `Cliente: ${c.cliente}` : "",
+    c.tipo ? `Tipo: ${c.tipo}` : "",
+    c.etapa_atual ? `Etapa atual: ${c.etapa_atual}` : "",
+    c.status ? `Status: ${c.status}` : "",
+    c.proxima_entrega ? `Próxima entrega: ${c.proxima_entrega}` : "",
+  ].filter(Boolean);
+  return `Projeto do NL OS — ${partes.join(" · ")}.`;
+}
+
+function tipoParaLinha(tipo?: string): "A" | "B" | "AB" | "C" | null {
+  const t = (tipo ?? "").toLowerCase();
+  if (t.includes("comerc") || t.includes("corporat") || t.includes("loja") || t.includes("escrit")) return "C";
+  if (t.includes("interior") || t.includes("decor") || t.includes("reforma")) return "B";
+  if (t.includes("arquitet") || t.includes("residenc") || t.includes("casa") || t.includes("terreno")) return "A";
+  return null;
 }
 
 function justificativaFormato(f: string) {
