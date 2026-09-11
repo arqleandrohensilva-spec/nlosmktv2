@@ -140,6 +140,50 @@ function parseCopy(content: string): CopyOutput {
   }
 }
 
+// Loop de performance: resume os dados reais de posts publicados para a IA
+// inclinar o conteúdo ao que já funciona (formato/linha/dores com melhor
+// engajamento). Só entra quando há base mínima (>=3 posts com métricas).
+async function resumoPerformance(client: ReturnType<typeof sb>): Promise<string> {
+  try {
+    const { data } = await client
+      .from("mkt_posts")
+      .select("linha, formato, dores(titulo), performance(curtidas, comentarios, salvamentos)")
+      .eq("status", "publicado");
+    const posts: any[] = data ?? [];
+    const eng = (p: any): number | null => {
+      const pf = p.performance?.[0];
+      return pf ? (pf.curtidas ?? 0) + (pf.comentarios ?? 0) + (pf.salvamentos ?? 0) : null;
+    };
+    const comPerf = posts.filter((p) => eng(p) !== null);
+    if (comPerf.length < 3) return "";
+    const ranking = (key: (p: any) => string | null) => {
+      const m: Record<string, { total: number; n: number }> = {};
+      for (const p of comPerf) {
+        const k = key(p);
+        if (!k) continue;
+        m[k] ??= { total: 0, n: 0 };
+        m[k].total += eng(p)!;
+        m[k].n += 1;
+      }
+      return Object.entries(m)
+        .map(([k, v]) => ({ k, avg: Math.round(v.total / v.n) }))
+        .sort((a, b) => b.avg - a.avg);
+    };
+    const topFormato = ranking((p) => p.formato)[0];
+    const topLinha = ranking((p) => p.linha)[0];
+    const topDores = ranking((p) => p.dores?.titulo ?? null).slice(0, 3);
+    const linhas = [
+      topFormato ? `- Formato com melhor engajamento médio: ${topFormato.k}` : "",
+      topLinha ? `- Linha com melhor engajamento médio: ${topLinha.k}` : "",
+      topDores.length ? `- Dores que mais engajam: ${topDores.map((d) => d.k).join("; ")}` : "",
+    ].filter(Boolean);
+    if (!linhas.length) return "";
+    return `APRENDIZADO DE PERFORMANCE (dados reais de ${comPerf.length} posts publicados — quando fizer sentido, incline o post para o que já funciona, sem forçar):\n${linhas.join("\n")}`;
+  } catch {
+    return "";
+  }
+}
+
 export const gerarCopy = createServerFn({ method: "POST" })
   .middleware([withExternalAuth])
   .inputValidator((input: unknown) => Input.parse(input))
@@ -152,6 +196,9 @@ export const gerarCopy = createServerFn({ method: "POST" })
       );
     }
 
+    const client = sb(context.accessToken);
+    const perfResumo = await resumoPerformance(client);
+
     const userPrompt = [
       `Linha de negócio: ${data.linha}`,
       `Formato: ${data.formato}`,
@@ -159,6 +206,7 @@ export const gerarCopy = createServerFn({ method: "POST" })
       data.observacao ? `Observação do fundador: ${data.observacao}` : "",
       data.ajuste_raciocinio ? `Ajuste solicitado no raciocínio: ${data.ajuste_raciocinio}` : "",
       data.imagem_contexto ? `Imagem de referência do projeto (descrição técnica): ${data.imagem_contexto}` : "",
+      perfResumo ? `\n${perfResumo}` : "",
       "",
       "OBRIGATÓRIO: inclua TODOS os campos do schema, inclusive prompt_imagem (um prompt de imagem detalhado e específico para este post, pronto para colar no Google Flow/Imagen). Nunca omita prompt_imagem.",
       "Responda EXCLUSIVAMENTE com o objeto JSON. Sem texto antes, sem texto depois, sem markdown, sem blocos de código, sem explicação. Apenas o JSON puro começando com { e terminando com }.",
@@ -166,7 +214,7 @@ export const gerarCopy = createServerFn({ method: "POST" })
       .filter(Boolean)
       .join("\n");
 
-    const systemPrompt = await getEffectiveSystemPrompt(sb(context.accessToken));
+    const systemPrompt = await getEffectiveSystemPrompt(client);
 
     const usarGemini = !!geminiKey;
     const r = usarGemini
