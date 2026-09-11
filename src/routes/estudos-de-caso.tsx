@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/lib/supabaseExternal";
 import { PageHeader } from "@/components/page-header";
 import { LINHAS } from "@/lib/nl-brand";
-import { gerarEstudoCaso, type EstudoCasoOutput } from "@/lib/estudos.functions";
+import { gerarEstudoCaso, rascunhoEstudoDoProjeto, type EstudoCasoOutput } from "@/lib/estudos.functions";
 import { BibliotecaPicker, signBibliotecaUrls, type BibliotecaImagemLite } from "@/components/biblioteca-picker";
 import { AgendarButton } from "@/components/agendar-modal";
 import { toast } from "sonner";
@@ -59,8 +59,10 @@ function EstudosPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const gerar = useServerFn(gerarEstudoCaso);
+  const rascunhar = useServerFn(rascunhoEstudoDoProjeto);
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [projetoSel, setProjetoSel] = useState("");
   const [nomeProjeto, setNomeProjeto] = useState("");
   const [linha, setLinha] = useState("A");
   const [cidade, setCidade] = useState("");
@@ -76,6 +78,39 @@ function EstudosPage() {
   const [conteudos, setConteudos] = useState<EstudoCasoOutput | null>(null);
   const [tab, setTab] = useState<(typeof TABS)[number]["key"]>("carrossel");
   const [estudoId, setEstudoId] = useState<string | null>(null);
+
+  const projetosNLOS = useQuery({
+    queryKey: ["contexto-marketing-nlos"],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      let q = (supabase as any)
+        .from("contexto_marketing_ativo")
+        .select("id, cliente, tipo, projeto_id, created_at")
+        .not("projeto_id", "is", null);
+      if (session?.user?.id) q = q.eq("user_id", session.user.id);
+      const { data, error } = await q.order("created_at", { ascending: false }).limit(20);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+
+  const rascunhoMut = useMutation({
+    mutationFn: async (projetoId: string) => rascunhar({ data: { projeto_id: projetoId } }),
+    onSuccess: (r) => {
+      setNomeProjeto(r.nome_projeto || "");
+      setLinha(r.linha || "A");
+      setCidade(r.cidade || "");
+      setProblema(r.problema || "");
+      setRestricoes(r.restricoes || "");
+      setPartido(r.partido || "");
+      const sol = (r.solucoes ?? []).filter(Boolean);
+      setSolucoes(sol.length >= 2 ? sol : [...sol, "", ""].slice(0, 2));
+      setResultado(r.resultado || "");
+      setDetalheTecnico(r.detalhe_tecnico || "");
+      toast.success("Rascunho preenchido do projeto. Revise e gere o estudo de caso.");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Falha ao rascunhar do projeto."),
+  });
 
   const salvos = useQuery({
     queryKey: ["estudos-caso"],
@@ -224,6 +259,43 @@ function EstudosPage() {
 
         {step === 1 && (
           <div className="space-y-5">
+            {(projetosNLOS.data?.length ?? 0) > 0 && (
+              <div className="border border-[color:var(--bronze)]/40 rounded-lg bg-[color:var(--bege)] p-4 space-y-3">
+                <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)]">
+                  AUTOMÁTICO — A PARTIR DE UM PROJETO DO NL OS
+                </div>
+                <p className="text-sm text-[color:var(--muted-foreground)]">
+                  Escolha um projeto entregue e a IA rascunha o estudo de caso a partir do briefing do cliente. Você revisa e gera.
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={projetoSel}
+                    onChange={(e) => setProjetoSel(e.target.value)}
+                    className={selectClass}
+                    style={{ maxWidth: 380 }}
+                  >
+                    <option value="">Selecione um projeto do NL OS…</option>
+                    {(projetosNLOS.data ?? []).map((p: any) => (
+                      <option key={p.id} value={p.projeto_id}>
+                        {p.cliente}{p.tipo ? ` · ${p.tipo}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    disabled={!projetoSel || rascunhoMut.isPending}
+                    onClick={() => rascunhoMut.mutate(projetoSel)}
+                    className={btnPrimary}
+                  >
+                    {rascunhoMut.isPending ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" /> Rascunhando…</>
+                    ) : (
+                      "Rascunhar do projeto"
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
             <SectionTitle title="O PROBLEMA" subtitle="QUAL ERA O DESAFIO DO PROJETO?" />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
