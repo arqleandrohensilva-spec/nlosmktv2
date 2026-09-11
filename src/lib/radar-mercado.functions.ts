@@ -173,7 +173,7 @@ async function callGeminiGrounded(system: string, prompt: string) {
 
   if (!res.ok) {
     const errBody = await res.text();
-    if (res.status === 429) throw new Error("Limite de requisições do Gemini atingido. Aguarde alguns segundos e tente de novo.");
+    if (res.status === 429) throw new Error(`Limite do Gemini (429). Motivo do Google: ${errBody.slice(0, 400)}`);
     if (res.status === 503) throw new Error("O Gemini está sobrecarregado agora (pico de demanda). Tente novamente em alguns segundos.");
     if (res.status === 403) throw new Error("Chave do Gemini sem permissão para este modelo ou para o Google Search grounding.");
     throw new Error(`Falha na IA Gemini (${res.status}): ${errBody.slice(0, 300)}`);
