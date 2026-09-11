@@ -2,9 +2,27 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { agendarViaWebhook } from "@/lib/make.functions";
+import { supabase } from "@/lib/supabaseExternal";
 import { toast } from "sonner";
-import { Send, X, Loader2, CalendarClock, Image as ImageIcon, Trash2 } from "lucide-react";
+import { Send, X, Loader2, CalendarClock, Image as ImageIcon, Trash2, Upload } from "lucide-react";
 import { BibliotecaPicker, type BibliotecaImagemLite, signBibliotecaUrls } from "@/components/biblioteca-picker";
+
+// Sobe a imagem (ex.: gerada no Google Flow) pro Storage e devolve uma URL
+// assinada de LONGA duração — precisa continuar válida até o Make publicar o
+// post agendado (por isso 1 ano, não os 3600s padrão da biblioteca).
+async function uploadImagemPost(file: File): Promise<{ url: string; nome: string }> {
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+  const path = `posts/${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage
+    .from("mkt-biblioteca-visual")
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (error) throw new Error(`Falha no upload: ${error.message}`);
+  const { data, error: signErr } = await supabase.storage
+    .from("mkt-biblioteca-visual")
+    .createSignedUrl(path, 60 * 60 * 24 * 365);
+  if (signErr || !data?.signedUrl) throw new Error("Falha ao gerar URL da imagem.");
+  return { url: data.signedUrl, nome: file.name };
+}
 
 type Kind = "posicionamento" | "projeto" | "bastidor";
 
@@ -61,6 +79,19 @@ export function AgendarModal({
   const [canal, setCanal] = useState<string>("instagram");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [imagem, setImagem] = useState<{ url: string; nome: string } | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  async function handleUpload(file: File | undefined) {
+    if (!file) return;
+    setUploading(true);
+    try {
+      setImagem(await uploadImagemPost(file));
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha no upload da imagem.");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   useEffect(() => {
     if (open) {
@@ -197,13 +228,29 @@ export function AgendarModal({
                 </button>
               </div>
             ) : (
-              <button
-                onClick={() => setPickerOpen(true)}
-                className="inline-flex items-center gap-2 rounded-[4px] border border-[color:var(--divisoria)] bg-white px-3 py-2 text-sm text-[color:var(--graphite)] hover:border-[color:var(--bronze)]"
-              >
-                <ImageIcon className="h-4 w-4" />
-                Escolher da biblioteca
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <label
+                  className={`inline-flex items-center gap-2 rounded-[4px] border border-[color:var(--divisoria)] bg-white px-3 py-2 text-sm text-[color:var(--graphite)] cursor-pointer hover:border-[color:var(--bronze)] ${
+                    uploading ? "opacity-60 pointer-events-none" : ""
+                  }`}
+                >
+                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  {uploading ? "Enviando…" : "Enviar imagem (Flow/computador)"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleUpload(e.target.files?.[0])}
+                  />
+                </label>
+                <button
+                  onClick={() => setPickerOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-[4px] border border-[color:var(--divisoria)] bg-white px-3 py-2 text-sm text-[color:var(--graphite)] hover:border-[color:var(--bronze)]"
+                >
+                  <ImageIcon className="h-4 w-4" />
+                  Escolher da biblioteca
+                </button>
+              </div>
             )}
           </div>
         </div>

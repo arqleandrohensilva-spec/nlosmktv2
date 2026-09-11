@@ -43,8 +43,6 @@ function MotorCopy() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [projetoNLOS, setProjetoNLOS] = useState<string>("");
   const [sugestao, setSugestao] = useState<SugestaoPost | null>(null);
-  const [imagemUrl, setImagemUrl] = useState<string | null>(null);
-  const [imgLoading, setImgLoading] = useState(false);
 
   // Ponte NL OS → MKT: contextos de projeto enviados pelo botão "Enviar para o
   // Marketing" do NL OS (tabela compartilhada contexto_marketing_ativo).
@@ -161,13 +159,6 @@ function MotorCopy() {
     onError: (e: any) => toast.error(e?.message ?? "Falha ao cadastrar a dor."),
   });
 
-  function gerarImagem() {
-    if (!output?.briefing_visual) return;
-    const seed = Math.floor(Math.random() * 1_000_000);
-    setImgLoading(true);
-    setImagemUrl(pollinationsUrl(output.briefing_visual, seed));
-  }
-
   function aplicarPostSugerido(s: SugestaoPost) {
     setLinha(s.linha);
     setFormato(s.formato);
@@ -194,7 +185,6 @@ function MotorCopy() {
     },
     onSuccess: (data) => {
       setOutput(data);
-      setImagemUrl(null);
       setStep(3);
     },
     onError: (err: any) => toast.error(err?.message ?? "Erro ao gerar copy"),
@@ -498,46 +488,6 @@ function MotorCopy() {
               <p className="whitespace-pre-wrap">{output.briefing_visual}</p>
             </Block>
 
-            <Block title="Imagem do post (IA)">
-              {!imagemUrl ? (
-                <div className="space-y-3">
-                  <p className="text-sm text-[color:var(--muted-foreground)]">
-                    Gera uma imagem grátis no tema do post, a partir do briefing visual acima.
-                  </p>
-                  <PrimaryButton onClick={gerarImagem}>
-                    <ImageIcon className="h-4 w-4" /> Gerar imagem com IA
-                  </PrimaryButton>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="relative inline-block">
-                    {imgLoading && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-[color:var(--gelo)]/80 rounded-[4px] text-sm text-[color:var(--muted-foreground)]">
-                        <Loader2 className="h-5 w-5 animate-spin mr-2" /> Gerando imagem…
-                      </div>
-                    )}
-                    <img
-                      src={imagemUrl}
-                      alt="Imagem gerada para o post"
-                      onLoad={() => setImgLoading(false)}
-                      onError={() => setImgLoading(false)}
-                      className="w-full max-w-sm rounded-[4px] border border-[color:var(--divisoria)]"
-                    />
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <SecondaryButton onClick={gerarImagem}>
-                      <ImageIcon className="h-4 w-4" /> Gerar outra
-                    </SecondaryButton>
-                    <SecondaryButton onClick={() => copyText(imagemUrl)}>
-                      <Copy className="h-4 w-4" /> Copiar URL
-                    </SecondaryButton>
-                  </div>
-                  <p className="text-xs text-[color:var(--muted-foreground)]">
-                    Essa imagem já entra automaticamente no "Agendar publicação" abaixo (vai pro Make).
-                  </p>
-                </div>
-              )}
-            </Block>
             <Block title="Registro de raciocínio">
               <table className="w-full text-sm">
                 <tbody>
@@ -571,7 +521,6 @@ function MotorCopy() {
                 origem="copy"
                 variant="secondary"
                 kind={formato === "reels" ? "projeto" : "posicionamento"}
-                imageUrl={imagemUrl ?? undefined}
               />
               <SecondaryButton
                 onClick={() =>
@@ -586,7 +535,7 @@ function MotorCopy() {
               <SecondaryButton onClick={() => copyText(output.copy_legenda)}>
                 <Copy className="h-4 w-4" /> Copiar legenda
               </SecondaryButton>
-              <SecondaryButton onClick={() => { setOutput(null); setImagemUrl(null); setStep(1); }}>
+              <SecondaryButton onClick={() => { setOutput(null); setStep(1); }}>
                 Novo post
               </SecondaryButton>
             </div>
@@ -600,16 +549,6 @@ function MotorCopy() {
       />
     </>
   );
-}
-
-// Gera a URL de imagem no Pollinations (grátis, sem chave) a partir do briefing
-// visual da copy + o estilo NL. A própria URL já é a imagem (usável no <img> e
-// como imagem_url no Make).
-function pollinationsUrl(briefingVisual: string, seed: number): string {
-  const estilo =
-    "fotografia arquitetônica editorial, luz natural suave, paleta neutra e quente (grafite, bronze, bege), elegante, minimalista, alta qualidade, realista, sem texto, sem palavras, sem logotipo";
-  const prompt = `${briefingVisual}. ${estilo}`.slice(0, 800);
-  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&model=flux&seed=${seed}`;
 }
 
 function contextoProjetoTexto(c: any): string {
