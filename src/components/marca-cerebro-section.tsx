@@ -14,6 +14,7 @@ type MarcaForm = {
   regras: string;
   extra: string;
   imagem: string;
+  exemplos: string;
 };
 
 const MARCA_VAZIO: MarcaForm = {
@@ -25,6 +26,7 @@ const MARCA_VAZIO: MarcaForm = {
   regras: "",
   extra: "",
   imagem: "",
+  exemplos: "",
 };
 
 const CAMPOS_MARCA: { k: keyof MarcaForm; label: string; ph: string; big?: boolean }[] = [
@@ -34,6 +36,7 @@ const CAMPOS_MARCA: { k: keyof MarcaForm; label: string; ph: string; big?: boole
   { k: "tom", label: "Tom de voz", ph: "Como a marca fala — e como NÃO fala…" },
   { k: "frases", label: "Frases validadas", ph: "Frases que funcionam (uma por linha)…" },
   { k: "regras", label: "Regras — nunca fazer", ph: "O que a marca nunca faz em uma peça (uma por linha)…" },
+  { k: "exemplos", label: "Posts de ouro (exemplos que funcionaram)", ph: "Cole aqui seus MELHORES posts reais — um por bloco, separados por uma linha em branco. A IA vai escrever imitando o estilo, ritmo e tom deles (sem copiar o conteúdo).", big: true },
   { k: "extra", label: "Conhecimento extra (cole textos/PDF)", ph: "Cole aqui o conteúdo de PDFs, documentos e notas sobre a marca. A IA vai usar como referência.", big: true },
   { k: "imagem", label: "Instruções para o agente de imagem", ph: "Diretrizes e referências para gerar as imagens dos posts: estilo, enquadramento, o que sempre incluir/evitar, referências visuais, tipo de render/foto, etc. Entra em todo prompt de imagem.", big: true },
 ];

@@ -17,6 +17,7 @@ export type MarcaConfig = {
   regras: string;
   extra: string;
   imagem: string; // instruções/referências para o agente que gera as imagens
+  exemplos: string; // "posts de ouro": posts reais que funcionaram, usados como few-shot
 };
 
 export const MARCA_CONFIG_VAZIA: MarcaConfig = {
@@ -28,6 +29,7 @@ export const MARCA_CONFIG_VAZIA: MarcaConfig = {
   regras: "",
   extra: "",
   imagem: "",
+  exemplos: "",
 };
 
 export async function readMarcaConfig(sb: SupabaseClient): Promise<MarcaConfig> {
@@ -84,6 +86,16 @@ export async function getEffectiveSystemPrompt(sb: SupabaseClient): Promise<stri
     bloco("Conhecimento adicional da marca", c.extra),
     bloco("Instruções para o agente de imagem (use no campo prompt_imagem)", c.imagem),
   ].join("");
-  if (!ajustes.trim()) return SYSTEM_PROMPT;
-  return `${SYSTEM_PROMPT}\n\n--- AJUSTES DA MARCA (configurados pelo time — PRIORIZE estes sobre o padrão acima) ---${ajustes}`;
+
+  // "Posts de ouro": exemplos reais injetados como few-shot para a IA imitar o
+  // estilo comprovado da marca (voz, ritmo, estrutura) — não copiar o conteúdo.
+  const fewShot = (c.exemplos ?? "").trim()
+    ? `\n\n--- POSTS DE OURO (posts reais da NL que já funcionaram) ---\nEscreva no MESMO padrão de voz, ritmo, estrutura e sofisticação destes exemplos. Capture o ESTILO — NÃO copie o conteúdo nem os temas.\n\n${c.exemplos.trim()}`
+    : "";
+
+  if (!ajustes.trim() && !fewShot) return SYSTEM_PROMPT;
+  const ajustesBloco = ajustes.trim()
+    ? `\n\n--- AJUSTES DA MARCA (configurados pelo time — PRIORIZE estes sobre o padrão acima) ---${ajustes}`
+    : "";
+  return `${SYSTEM_PROMPT}${ajustesBloco}${fewShot}`;
 }
