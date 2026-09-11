@@ -22,6 +22,7 @@ export type CopyOutput = {
   copy_legenda: string;
   copy_cta: string;
   briefing_visual: string;
+  prompt_imagem?: string;
 };
 
 type IaResult = { text: string; inTok: number; outTok: number };

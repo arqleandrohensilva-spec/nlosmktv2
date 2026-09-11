@@ -115,5 +115,6 @@ FORMATO DE RESPOSTA (JSON estrito, sem markdown, sem comentários):
   "copy_roteiro": "roteiro falado para Reels de 30-40s (deixe vazio se formato não for reels)",
   "copy_legenda": "legenda completa com abertura, desenvolvimento e fechamento",
   "copy_cta": "CTA de baixo atrito, convite para conversa",
-  "briefing_visual": "fundo, tipografia, composição, indicação de material do acervo"
+  "briefing_visual": "fundo, tipografia, composição, indicação de material do acervo",
+  "prompt_imagem": "prompt DETALHADO em português, pronto para colar num gerador de imagem (Google Flow / Imagen), descrevendo a imagem ideal para ESTE post específico: assunto/cena, ambiente, composição e enquadramento (vertical 4:5 para feed), iluminação, clima/atmosfera, estilo (fotografia arquitetônica editorial, realista, sofisticada), paleta NL (tons grafite, bronze mineral, bege areia, neutros quentes — nunca preto puro), materiais e acabamentos nobres. Termine sempre com: sem texto, sem palavras, sem logotipos. Não mencione o nome da marca."
 }`;

@@ -488,6 +488,16 @@ function MotorCopy() {
               <p className="whitespace-pre-wrap">{output.briefing_visual}</p>
             </Block>
 
+            {output.prompt_imagem && (
+              <Block title="Prompt de imagem (para o Flow)" copyable={output.prompt_imagem}>
+                <p className="whitespace-pre-wrap">{output.prompt_imagem}</p>
+                <p className="mt-3 text-xs text-[color:var(--muted-foreground)]">
+                  Copie este prompt e cole no Google Flow (ou outro gerador) para criar a imagem no
+                  tema do post. Depois baixe a imagem e use "Enviar imagem" no Agendar publicação.
+                </p>
+              </Block>
+            )}
+
             <Block title="Registro de raciocínio">
               <table className="w-full text-sm">
                 <tbody>
