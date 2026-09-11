@@ -143,25 +143,40 @@ async function callGeminiGrounded(system: string, prompt: string) {
   const key = geminiKey();
   if (!key) throw new Error("GEMINI_API_KEY não configurada.");
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: system }] },
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        tools: [{ google_search: {} }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 8192 },
-      }),
-    },
-  );
+  const body = JSON.stringify({
+    systemInstruction: { parts: [{ text: system }] },
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    tools: [{ google_search: {} }],
+    generationConfig: { temperature: 0.3, maxOutputTokens: 8192 },
+  });
+
+  // 429 (limite por minuto) e 503 (sobrecarga) são transitórios no tier grátis:
+  // espera e tenta de novo antes de desistir.
+  const MAX_TENTATIVAS = 4;
+  let res!: Response;
+  for (let tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa++) {
+    res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+        body,
+      },
+    );
+    if (res.ok) break;
+    if ((res.status === 429 || res.status === 503) && tentativa < MAX_TENTATIVAS) {
+      await new Promise((r) => setTimeout(r, 2500 * tentativa));
+      continue;
+    }
+    break;
+  }
 
   if (!res.ok) {
-    const body = await res.text();
-    if (res.status === 429) throw new Error("Limite de requisições do Gemini atingido. Tente novamente em instantes.");
+    const errBody = await res.text();
+    if (res.status === 429) throw new Error("Limite de requisições do Gemini atingido. Aguarde alguns segundos e tente de novo.");
+    if (res.status === 503) throw new Error("O Gemini está sobrecarregado agora (pico de demanda). Tente novamente em alguns segundos.");
     if (res.status === 403) throw new Error("Chave do Gemini sem permissão para este modelo ou para o Google Search grounding.");
-    throw new Error(`Falha na IA Gemini (${res.status}): ${body.slice(0, 300)}`);
+    throw new Error(`Falha na IA Gemini (${res.status}): ${errBody.slice(0, 300)}`);
   }
 
   const json = await res.json();
