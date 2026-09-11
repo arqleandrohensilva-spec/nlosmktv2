@@ -125,7 +125,11 @@ function apiKey() {
 
 export type Fonte = { title: string; uri: string };
 
-const GEMINI_MODEL = "gemini-2.5-pro";
+// Modelo do radar: usa o Gemini gratuito (Google AI Studio). O 2.5-pro foi
+// descontinuado para novos usuários; o flash novo aceita a chave formato "AQ..."
+// e suporta Google Search grounding. Configurável por env.
+const GEMINI_MODEL =
+  process.env.GEMINI_MODEL_RADAR?.trim() || process.env.GEMINI_MODEL?.trim() || "gemini-3.6-flash";
 
 function geminiKey() {
   return process.env.GEMINI_API_KEY ?? null;
@@ -140,10 +144,10 @@ async function callGeminiGrounded(system: string, prompt: string) {
   if (!key) throw new Error("GEMINI_API_KEY não configurada.");
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: system }] },
         contents: [{ role: "user", parts: [{ text: prompt }] }],
