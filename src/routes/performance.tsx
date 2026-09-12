@@ -21,7 +21,7 @@ function Performance() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("mkt_posts")
-        .select("id, linha, formato, dor_id, data_publicacao, created_at, dores(titulo), performance(views, curtidas, comentarios, salvamentos, compartilhamentos)")
+        .select("id, linha, formato, dor_id, data_publicacao, created_at, dores:mkt_dores(titulo), performance:mkt_performance(views, curtidas, comentarios, salvamentos, compartilhamentos)")
         .eq("status", "publicado")
         .order("data_publicacao", { ascending: false });
       if (error) throw error;

@@ -127,7 +127,7 @@ function AbaBiblioteca({ projetoInicial }: { projetoInicial?: string }) {
     queryFn: async () => {
       let q = supabase
         .from("mkt_biblioteca_imagens")
-        .select("*, projeto:projetos(nome, linha)")
+        .select("*, projeto:mkt_projetos(nome, linha)")
         .order("created_at", { ascending: false });
       if (linha) q = q.eq("linha", linha);
       if (tipo) q = q.eq("tipo", tipo);
@@ -1193,7 +1193,7 @@ function AbaAntesDepois() {
       const { data, error } = await supabase
         .from("mkt_antes_depois")
         .select(
-          "*, projeto:projetos(nome), antes:biblioteca_imagens!antes_depois_imagem_antes_id_fkey(id, url_storage, nome_arquivo), depois:biblioteca_imagens!antes_depois_imagem_depois_id_fkey(id, url_storage, nome_arquivo)",
+          "*, projeto:mkt_projetos(nome), antes:biblioteca_imagens!antes_depois_imagem_antes_id_fkey(id, url_storage, nome_arquivo), depois:biblioteca_imagens!antes_depois_imagem_depois_id_fkey(id, url_storage, nome_arquivo)",
         )
         .order("created_at", { ascending: false });
       if (error) throw error;

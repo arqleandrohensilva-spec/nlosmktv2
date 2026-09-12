@@ -147,7 +147,7 @@ async function resumoPerformance(client: ReturnType<typeof sb>): Promise<string>
   try {
     const { data } = await client
       .from("mkt_posts")
-      .select("linha, formato, dores(titulo), performance(curtidas, comentarios, salvamentos)")
+      .select("linha, formato, dores:mkt_dores(titulo), performance:mkt_performance(curtidas, comentarios, salvamentos)")
       .eq("status", "publicado");
     const posts: any[] = data ?? [];
     const eng = (p: any): number | null => {

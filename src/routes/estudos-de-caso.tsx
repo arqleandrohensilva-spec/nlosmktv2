@@ -655,7 +655,7 @@ function EstudosPage() {
                       }
                       const { data } = await (supabase as any)
                         .from("mkt_biblioteca_imagens")
-                        .select("*, projeto:projetos(nome)")
+                        .select("*, projeto:mkt_projetos(nome)")
                         .in("id", e.imagens_ids);
                       const rows = (data ?? []) as any[];
                       const map = await signBibliotecaUrls(rows.map((r) => r.url_storage));

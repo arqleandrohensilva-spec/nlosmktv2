@@ -89,7 +89,7 @@ function MotorCopy() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("mkt_posts")
-        .select("dor_id, performance(curtidas, comentarios, salvamentos)")
+        .select("dor_id, performance:mkt_performance(curtidas, comentarios, salvamentos)")
         .eq("status", "publicado");
       if (error) throw error;
       const map: Record<string, { total: number; count: number }> = {};
