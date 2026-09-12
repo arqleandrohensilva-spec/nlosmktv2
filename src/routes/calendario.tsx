@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/page-header";
 import { LINHAS, FORMATOS, STATUS, LINHA_BADGE } from "@/lib/nl-brand";
 import { gerarPlanoMensal, type PlanoItem } from "@/lib/plano.functions";
 import { useState, useMemo } from "react";
-import { Plus, X, AlertTriangle, Sparkles, Loader2, ArrowRight } from "lucide-react";
+import { Plus, X, AlertTriangle, Sparkles, Loader2, ArrowRight, Heart, MessageCircle, Send, Bookmark } from "lucide-react";
 import { signBibliotecaUrls } from "@/components/biblioteca-picker";
 import { toast } from "sonner";
 
@@ -339,7 +339,7 @@ function Calendario() {
               {selected.copy_roteiro && (
                 <Section label="Roteiro"><p className="whitespace-pre-wrap">{selected.copy_roteiro}</p></Section>
               )}
-              <Section label="Legenda"><p className="whitespace-pre-wrap">{selected.copy_legenda}</p></Section>
+              <LegendaComPreview key={selected.id} post={selected} />
               <Section label="CTA"><p>{selected.copy_cta}</p></Section>
               <Section label="Briefing visual"><p className="whitespace-pre-wrap">{selected.briefing_visual}</p></Section>
               {selected.raciocinio && (
@@ -408,6 +408,155 @@ function Section({ label, children }: { label: string; children: React.ReactNode
         {label.toUpperCase()}
       </div>
       <div className="text-[color:var(--graphite)] leading-relaxed">{children}</div>
+    </div>
+  );
+}
+
+// Fonte do sistema — o mockup imita a interface REAL do Instagram, não a marca NL.
+const FONTE_SISTEMA =
+  'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+
+// Formato do post -> qual variante de legenda mostrar por padrão.
+const LEGENDA_CHAVE_POR_FORMATO: Record<string, string> = {
+  reels: "reels",
+  stories: "stories",
+  estatico: "feed",
+  carrossel: "feed",
+};
+
+const LEGENDA_LABELS: Record<string, string> = {
+  feed: "Feed",
+  stories: "Stories",
+  reels: "Reels",
+  linkedin: "LinkedIn",
+};
+
+// copy_legenda pode ser: (a) JSON string com variantes por canal
+// {"feed": "...", "stories": "...", "reels": "...", "linkedin": "..."};
+// (b) já um objeto; ou (c) uma string simples (posts antigos). Resolve os 3 casos.
+function resolverLegenda(
+  raw: unknown,
+  formato: string,
+): { variantes: Record<string, string> | null; chaveInicial: string | null; textoSimples: string } {
+  const original = typeof raw === "string" ? raw : raw == null ? "" : String(raw);
+
+  let obj: any = null;
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    obj = raw;
+  } else if (typeof raw === "string") {
+    try {
+      const p = JSON.parse(raw);
+      if (p && typeof p === "object" && !Array.isArray(p)) obj = p;
+    } catch {
+      /* string simples — cai no fallback */
+    }
+  }
+
+  if (obj) {
+    const variantes: Record<string, string> = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (typeof v === "string" && v.trim()) variantes[k] = v;
+    }
+    if (Object.keys(variantes).length > 0) {
+      const preferida = LEGENDA_CHAVE_POR_FORMATO[formato] ?? "feed";
+      const chaveInicial = variantes[preferida] ? preferida : Object.keys(variantes)[0];
+      return { variantes, chaveInicial, textoSimples: original };
+    }
+  }
+
+  return { variantes: null, chaveInicial: null, textoSimples: original };
+}
+
+function LegendaComPreview({ post }: { post: any }) {
+  const { variantes, chaveInicial, textoSimples } = useMemo(
+    () => resolverLegenda(post.copy_legenda, post.formato),
+    [post.copy_legenda, post.formato],
+  );
+  const [aba, setAba] = useState<string>(chaveInicial ?? "");
+
+  const legendaTexto = variantes
+    ? variantes[aba] ?? (chaveInicial ? variantes[chaveInicial] : "") ?? ""
+    : textoSimples;
+
+  const vertical = post.formato === "reels" || post.formato === "stories";
+  const chaves = variantes ? Object.keys(variantes) : [];
+
+  return (
+    <div className="space-y-5">
+      {/* Prévia visual — imita a interface real do Instagram (fonte do sistema). */}
+      <div>
+        <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)] mb-2">
+          PRÉVIA NO INSTAGRAM
+        </div>
+        <div
+          className="max-w-[360px] rounded-lg border border-[color:var(--divisoria)] overflow-hidden bg-white"
+          style={{ fontFamily: FONTE_SISTEMA }}
+        >
+          {/* Cabeçalho */}
+          <div className="flex items-center gap-2.5 px-3 py-2.5">
+            <div
+              className="h-8 w-8 rounded-full flex items-center justify-center text-white text-[11px] font-semibold"
+              style={{ backgroundColor: "#8B7355" }}
+            >
+              NL
+            </div>
+            <span className="text-[13px] font-semibold" style={{ color: "#262626" }}>
+              nlarquitetos
+            </span>
+          </div>
+
+          {/* Imagem (1:1 feed/carrossel, 9:16 reels/stories) */}
+          <div
+            className={vertical ? "aspect-[9/16]" : "aspect-square"}
+            style={{ backgroundColor: "#efefef" }}
+          >
+            {post.imagem_signed_url ? (
+              <img src={post.imagem_signed_url} alt="" className="w-full h-full object-cover" />
+            ) : null}
+          </div>
+
+          {/* Ações (decorativas) */}
+          <div className="flex items-center px-3 pt-2.5">
+            <div className="flex items-center gap-4">
+              <Heart className="h-6 w-6" strokeWidth={1.8} style={{ color: "#262626" }} />
+              <MessageCircle className="h-6 w-6" strokeWidth={1.8} style={{ color: "#262626" }} />
+              <Send className="h-6 w-6" strokeWidth={1.8} style={{ color: "#262626" }} />
+            </div>
+            <Bookmark className="h-6 w-6 ml-auto" strokeWidth={1.8} style={{ color: "#262626" }} />
+          </div>
+
+          {/* Legenda no padrão do Instagram: username em negrito + texto */}
+          <div className="px-3 py-2.5 text-[13px] leading-snug" style={{ color: "#262626" }}>
+            <span className="font-semibold mr-1.5">nlarquitetos</span>
+            <span className="whitespace-pre-wrap">{legendaTexto}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Texto completo + seletor de variantes */}
+      <div>
+        <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)] mb-2">
+          LEGENDA
+        </div>
+        {chaves.length > 1 && (
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {chaves.map((k) => (
+              <button
+                key={k}
+                onClick={() => setAba(k)}
+                className={`px-2.5 py-1 text-[11px] rounded-[4px] border transition-colors ${
+                  aba === k
+                    ? "bg-[color:var(--graphite)] text-white border-[color:var(--graphite)]"
+                    : "bg-white text-[color:var(--graphite)] border-[color:var(--divisoria)] hover:border-[color:var(--bronze)]"
+                }`}
+              >
+                {LEGENDA_LABELS[k] ?? k}
+              </button>
+            ))}
+          </div>
+        )}
+        <p className="whitespace-pre-wrap text-[color:var(--graphite)] leading-relaxed">{legendaTexto}</p>
+      </div>
     </div>
   );
 }
