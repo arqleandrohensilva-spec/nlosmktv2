@@ -1,10 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/lib/supabaseExternal";
 import { PageHeader } from "@/components/page-header";
 import { LINHAS, FORMATOS, STATUS, LINHA_BADGE } from "@/lib/nl-brand";
+import { gerarPlanoMensal, type PlanoItem } from "@/lib/plano.functions";
 import { useState, useMemo } from "react";
-import { Plus, X, AlertTriangle } from "lucide-react";
+import { Plus, X, AlertTriangle, Sparkles, Loader2, ArrowRight } from "lucide-react";
 import { signBibliotecaUrls } from "@/components/biblioteca-picker";
 import { toast } from "sonner";
 
@@ -17,6 +19,17 @@ function Calendario() {
   const [filterStatus, setFilterStatus] = useState<string>("");
   const [selected, setSelected] = useState<any | null>(null);
   const qc = useQueryClient();
+  const gerarPlano = useServerFn(gerarPlanoMensal);
+  const [plano, setPlano] = useState<PlanoItem[] | null>(null);
+
+  const planoMut = useMutation({
+    mutationFn: async () => gerarPlano({ data: { quantidade: 8 } }),
+    onSuccess: (p) => {
+      setPlano(p);
+      toast.success("Plano do mês gerado. Clique em cada item para gerar a copy.");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Falha ao gerar o plano do mês."),
+  });
 
   const { data: posts } = useQuery({
     queryKey: ["posts", filterLinha, filterStatus],
@@ -105,16 +118,88 @@ function Calendario() {
         title="Produção do mês"
         description="Cada post registrado com raciocínio, formato e status de publicação."
         actions={
-          <Link
-            to="/copy"
-            className="inline-flex items-center gap-2 rounded-[4px] bg-[color:var(--graphite)] px-4 py-2 text-sm text-white hover:bg-[color:var(--bronze)] transition-colors"
-          >
-            <Plus className="h-4 w-4" /> Novo post
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => planoMut.mutate()}
+              disabled={planoMut.isPending}
+              className="inline-flex items-center gap-2 rounded-[4px] border border-[color:var(--divisoria)] bg-white px-4 py-2 text-sm text-[color:var(--graphite)] hover:border-[color:var(--bronze)] transition-colors disabled:opacity-40"
+            >
+              {planoMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              Plano do mês (IA)
+            </button>
+            <Link
+              to="/copy"
+              className="inline-flex items-center gap-2 rounded-[4px] bg-[color:var(--graphite)] px-4 py-2 text-sm text-white hover:bg-[color:var(--bronze)] transition-colors"
+            >
+              <Plus className="h-4 w-4" /> Novo post
+            </Link>
+          </div>
         }
       />
 
       <div className="px-4 md:px-10 py-8">
+        {plano && plano.length > 0 && (
+          <div className="mb-8 border border-[color:var(--bronze)]/40 rounded-lg bg-[color:var(--bege)] p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)]">
+                PLANO DO MÊS (IA) · {plano.length} POSTS
+              </div>
+              <button
+                onClick={() => setPlano(null)}
+                className="text-[color:var(--muted-foreground)] hover:text-[color:var(--graphite)]"
+                aria-label="Fechar plano"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[1, 2, 3, 4].map((sem) => {
+                const itens = plano.filter((i) => i.semana === sem);
+                if (!itens.length) return null;
+                return (
+                  <div key={sem} className="space-y-2">
+                    <div className="font-mono text-[10px] tracking-widest text-[color:var(--muted-foreground)]">
+                      SEMANA {sem}
+                    </div>
+                    {itens.map((it, idx) => (
+                      <Link
+                        key={idx}
+                        to="/copy"
+                        search={{
+                          dor: it.dor_id ?? undefined,
+                          linha: it.linha,
+                          formato: it.formato,
+                          observacao: `${it.tema}${it.gancho ? " — " + it.gancho : ""}`,
+                        } as any}
+                        className="block border border-[color:var(--divisoria)] bg-white rounded-[4px] p-3 hover:border-[color:var(--bronze)] transition-colors"
+                      >
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`px-2 py-0.5 rounded-[4px] text-[10px] font-mono tracking-widest ${LINHA_BADGE[it.linha]}`}>
+                            L.{it.linha}
+                          </span>
+                          <span className="font-mono text-[9px] tracking-widest uppercase text-[color:var(--bronze)]">
+                            {it.pilar}
+                          </span>
+                          <span className="font-mono text-[9px] tracking-widest uppercase text-[color:var(--muted-foreground)]">
+                            {FORMATOS.find((f) => f.value === it.formato)?.label ?? it.formato}
+                          </span>
+                        </div>
+                        <div className="font-serif text-sm text-[color:var(--graphite)] mt-1">{it.tema}</div>
+                        {it.dor_titulo && (
+                          <div className="text-xs text-[color:var(--muted-foreground)] mt-0.5">Dor: {it.dor_titulo}</div>
+                        )}
+                        <div className="mt-2 inline-flex items-center gap-1 text-xs text-[color:var(--bronze)]">
+                          Gerar copy <ArrowRight className="h-3 w-3" />
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="mb-8">
           <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)] mb-3">
             VISÃO SEMANAL
