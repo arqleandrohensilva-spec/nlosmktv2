@@ -198,14 +198,16 @@ export const gerarObservacao = createServerFn({ method: "POST" })
     const linhaTxt = data.linha ? (LINHA_DESC[data.linha] ?? data.linha) : "";
 
     const system =
-      "Você é o estrategista de conteúdo da NL Arquitetos. Sua tarefa é escrever uma OBSERVAÇÃO curta e prática (um direcionamento) para o motor de copy, dizendo o ângulo, a ênfase e o que destacar num post — a partir da dor da persona, do formato e da linha de negócio informados. Quando houver briefing de um projeto real, ancore a observação em detalhes concretos dele (sem inventar dados). A observação deve ter 1 a 3 frases, tom técnico e sóbrio (padrão NL: sem emoji, sem superlativo vazio, sem urgência artificial, nunca 'preto puro'). Responda SOMENTE com JSON.";
+      "Você é o estrategista de conteúdo da NL Arquitetos. Sua tarefa é escrever uma OBSERVAÇÃO curta e prática (um direcionamento) para o motor de copy, dizendo o ângulo, a ênfase e o que destacar num post — a partir da dor da persona, do formato e da linha de negócio informados. Quando houver briefing de um projeto real, ancore a observação em detalhes concretos dele (sem inventar dados). Quando não houver projeto, ainda assim prefira SEMPRE ancorar em algo concreto e verificável (uma fase do método, um documento, um material, um número) em vez de ficar só em conceitos abstratos soltos como 'transparência' ou 'clareza'. A observação deve ter 1 a 3 frases, tom técnico e sóbrio (padrão NL: sem emoji, sem superlativo vazio, sem urgência artificial, nunca 'preto puro'). Responda SOMENTE com JSON.";
 
     const prompt = [
       data.dor_titulo ? `Dor da persona: ${data.dor_titulo}` : "Dor da persona: (não informada)",
       data.dor_descricao ? `Descrição da dor: ${data.dor_descricao}` : "",
       linhaTxt ? `Linha de negócio: ${linhaTxt}` : "",
       data.formato ? `Formato do post: ${data.formato}` : "",
-      briefingTexto ? `Briefing do projeto (NL OS):\n${briefingTexto}` : "Sem projeto do NL OS selecionado — baseie-se na dor, formato e linha.",
+      briefingTexto
+        ? `Briefing do projeto (NL OS):\n${briefingTexto}`
+        : "Sem projeto do NL OS selecionado. Ancore a observação em algo concreto mesmo assim — prefira referenciar uma das 4 fases reais do método da NL (1. Diagnóstico e diretrizes; 2. Estudo preliminar — conceito e implantação; 3. Anteprojeto — solução arquitetônica consolidada; 4. Projeto executivo — caderno técnico para obra) em vez de ficar em conceito abstrato como 'transparência' ou 'clareza' soltos.",
       data.observacao_atual ? `Observação atual do usuário (aprimore/complemente sem repetir):\n${data.observacao_atual}` : "",
       "",
       'Responda EXCLUSIVAMENTE com este JSON: {"observacao": "<direcionamento de 1 a 3 frases>"}',
