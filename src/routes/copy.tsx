@@ -15,7 +15,7 @@ import { BibliotecaPicker, type BibliotecaImagemLite } from "@/components/biblio
 import { AgendarButton } from "@/components/agendar-modal";
 import { toast } from "sonner";
 
-type Search = { dor?: string; linha?: string; formato?: string; observacao?: string };
+type Search = { dor?: string; linha?: string; formato?: string; observacao?: string; projeto?: string };
 
 export const Route = createFileRoute("/copy")({
   validateSearch: (s: Record<string, unknown>): Search => ({
@@ -23,6 +23,7 @@ export const Route = createFileRoute("/copy")({
     linha: typeof s.linha === "string" ? s.linha : undefined,
     formato: typeof s.formato === "string" ? s.formato : undefined,
     observacao: typeof s.observacao === "string" ? s.observacao : undefined,
+    projeto: typeof s.projeto === "string" ? s.projeto : undefined,
   }),
   component: MotorCopy,
 });
@@ -48,7 +49,7 @@ function MotorCopy() {
   const [output, setOutput] = useState<CopyOutput | null>(null);
   const [imagem, setImagem] = useState<BibliotecaImagemLite | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [projetoNLOS, setProjetoNLOS] = useState<string>("");
+  const [projetoNLOS, setProjetoNLOS] = useState<string>(search.projeto ?? "");
   const [sugestao, setSugestao] = useState<SugestaoPost | null>(null);
   const [instrucoesImagem, setInstrucoesImagem] = useState("");
   const [promptGerado, setPromptGerado] = useState<string | null>(null);

@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/lib/supabaseExternal";
 import { PageHeader } from "@/components/page-header";
 import { LINHAS, FORMATOS, STATUS, LINHA_BADGE } from "@/lib/nl-brand";
-import { gerarPlanoMensal, type PlanoItem } from "@/lib/plano.functions";
+import { gerarPlanoMensal, type PlanoItem, type PlanoPeriodo } from "@/lib/plano.functions";
 import { useState, useMemo } from "react";
 import { Plus, X, AlertTriangle, Sparkles, Loader2, ArrowRight, Heart, MessageCircle, Send, Bookmark, ThumbsUp, Repeat2 } from "lucide-react";
 import { signBibliotecaUrls } from "@/components/biblioteca-picker";
@@ -14,6 +14,12 @@ export const Route = createFileRoute("/calendario")({
   component: Calendario,
 });
 
+const PERIODO_LABEL: Record<PlanoPeriodo, string> = {
+  semana: "1 semana",
+  quinzena: "15 dias",
+  mes: "1 mês",
+};
+
 function Calendario() {
   const [filterLinha, setFilterLinha] = useState<string>("");
   const [filterStatus, setFilterStatus] = useState<string>("");
@@ -21,14 +27,17 @@ function Calendario() {
   const qc = useQueryClient();
   const gerarPlano = useServerFn(gerarPlanoMensal);
   const [plano, setPlano] = useState<PlanoItem[] | null>(null);
+  const [periodo, setPeriodo] = useState<PlanoPeriodo>("mes");
+  const [planoPeriodo, setPlanoPeriodo] = useState<PlanoPeriodo>("mes");
 
   const planoMut = useMutation({
-    mutationFn: async () => gerarPlano({ data: { quantidade: 8 } }),
+    mutationFn: async () => gerarPlano({ data: { periodo } }),
     onSuccess: (p) => {
       setPlano(p);
-      toast.success("Plano do mês gerado. Clique em cada item para gerar a copy.");
+      setPlanoPeriodo(periodo);
+      toast.success(`Plano de ${PERIODO_LABEL[periodo]} gerado. Clique em cada item para gerar a copy.`);
     },
-    onError: (e: any) => toast.error(e?.message ?? "Falha ao gerar o plano do mês."),
+    onError: (e: any) => toast.error(e?.message ?? "Falha ao gerar o plano.")
   });
 
   const { data: posts } = useQuery({
@@ -118,14 +127,24 @@ function Calendario() {
         title="Produção do mês"
         description="Cada post registrado com raciocínio, formato e status de publicação."
         actions={
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={periodo}
+              onChange={(e) => setPeriodo(e.target.value as PlanoPeriodo)}
+              className="rounded-[4px] border border-[color:var(--divisoria)] bg-white px-3 py-2 text-sm text-[color:var(--graphite)] focus:outline-none focus:border-[color:var(--bronze)]"
+              aria-label="Período do plano"
+            >
+              <option value="semana">1 semana</option>
+              <option value="quinzena">15 dias</option>
+              <option value="mes">1 mês</option>
+            </select>
             <button
               onClick={() => planoMut.mutate()}
               disabled={planoMut.isPending}
               className="inline-flex items-center gap-2 rounded-[4px] border border-[color:var(--divisoria)] bg-white px-4 py-2 text-sm text-[color:var(--graphite)] hover:border-[color:var(--bronze)] transition-colors disabled:opacity-40"
             >
               {planoMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              Plano do mês (IA)
+              Gerar plano (IA)
             </button>
             <Link
               to="/copy"
@@ -142,7 +161,7 @@ function Calendario() {
           <div className="mb-8 border border-[color:var(--bronze)]/40 rounded-lg bg-[color:var(--bege)] p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)]">
-                PLANO DO MÊS (IA) · {plano.length} POSTS
+                PLANO DE {PERIODO_LABEL[planoPeriodo].toUpperCase()} (IA) · {plano.length} POSTS
               </div>
               <button
                 onClick={() => setPlano(null)}
@@ -153,49 +172,57 @@ function Calendario() {
               </button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[1, 2, 3, 4].map((sem) => {
-                const itens = plano.filter((i) => i.semana === sem);
-                if (!itens.length) return null;
-                return (
-                  <div key={sem} className="space-y-2">
-                    <div className="font-mono text-[10px] tracking-widest text-[color:var(--muted-foreground)]">
-                      SEMANA {sem}
+              {Array.from(new Set(plano.map((i) => i.semana)))
+                .sort((a, b) => a - b)
+                .map((sem) => {
+                  const itens = plano.filter((i) => i.semana === sem);
+                  if (!itens.length) return null;
+                  return (
+                    <div key={sem} className="space-y-2">
+                      <div className="font-mono text-[10px] tracking-widest text-[color:var(--muted-foreground)]">
+                        SEMANA {sem}
+                      </div>
+                      {itens.map((it, idx) => (
+                        <Link
+                          key={idx}
+                          to="/copy"
+                          search={{
+                            dor: it.dor_id ?? undefined,
+                            linha: it.linha,
+                            formato: it.formato,
+                            observacao: `${it.tema}${it.gancho ? " — " + it.gancho : ""}`,
+                            projeto: it.contexto_id ?? undefined,
+                          } as any}
+                          className="block border border-[color:var(--divisoria)] bg-white rounded-[4px] p-3 hover:border-[color:var(--bronze)] transition-colors"
+                        >
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`px-2 py-0.5 rounded-[4px] text-[10px] font-mono tracking-widest ${LINHA_BADGE[it.linha]}`}>
+                              L.{it.linha}
+                            </span>
+                            <span className="font-mono text-[9px] tracking-widest uppercase text-[color:var(--bronze)]">
+                              {it.pilar}
+                            </span>
+                            <span className="font-mono text-[9px] tracking-widest uppercase text-[color:var(--muted-foreground)]">
+                              {FORMATOS.find((f) => f.value === it.formato)?.label ?? it.formato}
+                            </span>
+                            {it.origem === "projeto" && it.cliente && (
+                              <span className="px-2 py-0.5 rounded-[4px] text-[9px] font-mono tracking-widest uppercase bg-[color:var(--bronze)] text-white">
+                                Projeto · {it.cliente}
+                              </span>
+                            )}
+                          </div>
+                          <div className="font-serif text-sm text-[color:var(--graphite)] mt-1">{it.tema}</div>
+                          {it.origem !== "projeto" && it.dor_titulo && (
+                            <div className="text-xs text-[color:var(--muted-foreground)] mt-0.5">Dor: {it.dor_titulo}</div>
+                          )}
+                          <div className="mt-2 inline-flex items-center gap-1 text-xs text-[color:var(--bronze)]">
+                            Gerar copy <ArrowRight className="h-3 w-3" />
+                          </div>
+                        </Link>
+                      ))}
                     </div>
-                    {itens.map((it, idx) => (
-                      <Link
-                        key={idx}
-                        to="/copy"
-                        search={{
-                          dor: it.dor_id ?? undefined,
-                          linha: it.linha,
-                          formato: it.formato,
-                          observacao: `${it.tema}${it.gancho ? " — " + it.gancho : ""}`,
-                        } as any}
-                        className="block border border-[color:var(--divisoria)] bg-white rounded-[4px] p-3 hover:border-[color:var(--bronze)] transition-colors"
-                      >
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`px-2 py-0.5 rounded-[4px] text-[10px] font-mono tracking-widest ${LINHA_BADGE[it.linha]}`}>
-                            L.{it.linha}
-                          </span>
-                          <span className="font-mono text-[9px] tracking-widest uppercase text-[color:var(--bronze)]">
-                            {it.pilar}
-                          </span>
-                          <span className="font-mono text-[9px] tracking-widest uppercase text-[color:var(--muted-foreground)]">
-                            {FORMATOS.find((f) => f.value === it.formato)?.label ?? it.formato}
-                          </span>
-                        </div>
-                        <div className="font-serif text-sm text-[color:var(--graphite)] mt-1">{it.tema}</div>
-                        {it.dor_titulo && (
-                          <div className="text-xs text-[color:var(--muted-foreground)] mt-0.5">Dor: {it.dor_titulo}</div>
-                        )}
-                        <div className="mt-2 inline-flex items-center gap-1 text-xs text-[color:var(--bronze)]">
-                          Gerar copy <ArrowRight className="h-3 w-3" />
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
           </div>
         )}
