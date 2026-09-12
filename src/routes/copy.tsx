@@ -7,6 +7,7 @@ import { gerarCopy, type CopyOutput } from "@/lib/copy.functions";
 import { sugerirDorEPost, type SugestaoPost } from "@/lib/sugestao.functions";
 import { getMarcaConfig } from "@/lib/marca-config.functions";
 import { gerarPromptImagem } from "@/lib/imagem.functions";
+import { validarPeca, type ValidarOutput } from "@/lib/validar.functions";
 import { PageHeader } from "@/components/page-header";
 import { LINHAS, FORMATOS } from "@/lib/nl-brand";
 import { Loader2, Copy, AlertTriangle, Image as ImageIcon, X } from "lucide-react";
@@ -33,6 +34,7 @@ function MotorCopy() {
   const sugerir = useServerFn(sugerirDorEPost);
   const carregarMarca = useServerFn(getMarcaConfig);
   const gerarPrompt = useServerFn(gerarPromptImagem);
+  const validar = useServerFn(validarPeca);
   const queryClient = useQueryClient();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -49,6 +51,7 @@ function MotorCopy() {
   const [sugestao, setSugestao] = useState<SugestaoPost | null>(null);
   const [instrucoesImagem, setInstrucoesImagem] = useState("");
   const [promptGerado, setPromptGerado] = useState<string | null>(null);
+  const [validacao, setValidacao] = useState<ValidarOutput | null>(null);
 
   // Ponte NL OS → MKT: contextos de projeto enviados pelo botão "Enviar para o
   // Marketing" do NL OS (tabela compartilhada contexto_marketing_ativo).
@@ -199,6 +202,7 @@ function MotorCopy() {
       setOutput(data);
       setPromptGerado(null);
       setInstrucoesImagem("");
+      setValidacao(null);
       setStep(3);
     },
     onError: (err: any) => toast.error(err?.message ?? "Erro ao gerar copy"),
@@ -217,6 +221,15 @@ function MotorCopy() {
       }),
     onSuccess: (r) => setPromptGerado(r.prompt),
     onError: (e: any) => toast.error(e?.message ?? "Falha ao gerar prompt de imagem."),
+  });
+
+  const validarMut = useMutation({
+    mutationFn: async () =>
+      validar({
+        data: { texto: [output?.copy_legenda, output?.copy_cta].filter(Boolean).join("\n\n") },
+      }),
+    onSuccess: (v) => setValidacao(v),
+    onError: (e: any) => toast.error(e?.message ?? "Falha ao validar a peça."),
   });
 
   const salvar = useMutation({
@@ -624,10 +637,53 @@ function MotorCopy() {
               <SecondaryButton onClick={() => copyText(output.copy_legenda)}>
                 <Copy className="h-4 w-4" /> Copiar legenda
               </SecondaryButton>
-              <SecondaryButton onClick={() => { setOutput(null); setPromptGerado(null); setInstrucoesImagem(""); setStep(1); }}>
+              <SecondaryButton disabled={validarMut.isPending} onClick={() => validarMut.mutate()}>
+                {validarMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                Validar marca
+              </SecondaryButton>
+              <SecondaryButton onClick={() => { setOutput(null); setPromptGerado(null); setInstrucoesImagem(""); setValidacao(null); setStep(1); }}>
                 Novo post
               </SecondaryButton>
             </div>
+
+            {validacao && (
+              <div
+                className={[
+                  "border rounded-lg p-4",
+                  validacao.aprovado
+                    ? "border-emerald-500/40 bg-emerald-50"
+                    : "border-[color:var(--bronze)]/50 bg-[color:var(--bege)]",
+                ].join(" ")}
+              >
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)]">RÉGUA DA MARCA</span>
+                  <span className="font-serif text-2xl text-[color:var(--graphite)]">{validacao.score}</span>
+                  <span className="text-xs text-[color:var(--muted-foreground)]">/ 100</span>
+                  <span
+                    className={[
+                      "ml-2 font-mono text-[9px] tracking-widest uppercase px-2 py-0.5 rounded-full",
+                      validacao.aprovado ? "bg-emerald-600 text-white" : "bg-[color:var(--bronze)] text-white",
+                    ].join(" ")}
+                  >
+                    {validacao.aprovado ? "aprovado" : "ajustar"}
+                  </span>
+                </div>
+                {validacao.resumo && (
+                  <p className="mt-2 text-sm text-[color:var(--graphite)]">{validacao.resumo}</p>
+                )}
+                {validacao.problemas?.length > 0 && (
+                  <ul className="mt-3 space-y-2">
+                    {validacao.problemas.map((p, i) => (
+                      <li key={i} className="text-sm text-[color:var(--graphite)]">
+                        <span className="font-medium">{p.regra}</span>
+                        {p.trecho && <span className="italic text-[color:var(--muted-foreground)]"> — "{p.trecho}"</span>}
+                        <div className="text-xs text-[color:var(--muted-foreground)]">{p.sugestao}</div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
