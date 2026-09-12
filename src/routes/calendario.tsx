@@ -34,7 +34,7 @@ function Calendario() {
   const { data: posts } = useQuery({
     queryKey: ["posts", filterLinha, filterStatus],
     queryFn: async () => {
-      let q = supabase.from("mkt_posts").select("*, dores(titulo)").order("created_at", { ascending: false });
+      let q = supabase.from("mkt_posts").select("*, dores:mkt_dores(titulo)").order("created_at", { ascending: false });
       if (filterLinha) q = q.eq("linha", filterLinha);
       if (filterStatus) q = q.eq("status", filterStatus);
       const { data, error } = await q;

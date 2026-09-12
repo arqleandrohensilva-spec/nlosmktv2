@@ -239,7 +239,7 @@ export const regenerarAntesDepois = createServerFn({ method: "POST" })
     const sb = serverSb();
     const { data: row, error } = await sb
       .from("mkt_antes_depois")
-      .select("*, antes:biblioteca_imagens!antes_depois_imagem_antes_id_fkey(url_storage), depois:biblioteca_imagens!antes_depois_imagem_depois_id_fkey(url_storage)")
+      .select("*, antes:mkt_biblioteca_imagens!mkt_antes_depois_imagem_antes_id_fkey(url_storage), depois:mkt_biblioteca_imagens!mkt_antes_depois_imagem_depois_id_fkey(url_storage)")
       .eq("id", data.id)
       .single();
     if (error || !row) throw new Error("Comparativo não encontrado.");

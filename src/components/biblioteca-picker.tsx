@@ -48,7 +48,7 @@ export function BibliotecaPicker({
     queryFn: async () => {
       let q = supabase
         .from("mkt_biblioteca_imagens")
-        .select("*, projeto:projetos(nome)")
+        .select("*, projeto:mkt_projetos(nome)")
         .order("created_at", { ascending: false })
         .limit(60);
       if (filtroLinha) q = q.eq("linha", filtroLinha);
