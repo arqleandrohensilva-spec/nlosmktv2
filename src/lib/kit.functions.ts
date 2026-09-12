@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { logAnthropicUsage } from "./uso-ia.server";
+import { logAnthropicUsage, logGeminiUsage } from "./uso-ia.server";
 
 const Input = z.object({
   conteudo: z.string().min(1),
@@ -53,13 +53,78 @@ Responda EXCLUSIVAMENTE com JSON puro, sem markdown:
   "email": "ASSUNTO: linha do assunto\nCORPO: corpo do email"
 }`;
 
+const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || "gemini-3.6-flash";
+
+async function chamarGemini(
+  key: string,
+  system: string,
+  prompt: string,
+): Promise<{ text: string; inTok: number; outTok: number }> {
+  const body = JSON.stringify({
+    systemInstruction: { parts: [{ text: system }] },
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    generationConfig: { temperature: 0.7, maxOutputTokens: 4000, responseMimeType: "application/json" },
+  });
+  const MAX = 4;
+  let ultimo = 0;
+  for (let t = 1; t <= MAX; t++) {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+      { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": key }, body },
+    );
+    if (res.ok) {
+      const json = await res.json();
+      const parts: Array<{ text?: string }> = json?.candidates?.[0]?.content?.parts ?? [];
+      return {
+        text: parts.map((p) => p?.text ?? "").join("").trim(),
+        inTok: json?.usageMetadata?.promptTokenCount ?? 0,
+        outTok: json?.usageMetadata?.candidatesTokenCount ?? 0,
+      };
+    }
+    ultimo = res.status;
+    const err = await res.text();
+    if ((res.status === 429 || res.status === 503) && t < MAX) {
+      await new Promise((r) => setTimeout(r, 1500 * t));
+      continue;
+    }
+    if (res.status === 400 || res.status === 403) throw new Error(`Chave do Gemini inválida ou sem permissão (${res.status}).`);
+    if (res.status !== 429 && res.status !== 503) throw new Error(`Falha na IA Gemini (${res.status}): ${err.slice(0, 200)}`);
+  }
+  throw new Error(
+    ultimo === 429
+      ? "Limite de requisições do Gemini atingido. Tente novamente em instantes."
+      : "O Gemini está sobrecarregado. Tente novamente em alguns segundos.",
+  );
+}
+
+function parseKit(content: string): KitOutput {
+  try {
+    return JSON.parse(content) as KitOutput;
+  } catch {
+    const cleaned = content.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start === -1 || end === -1 || end <= start) {
+      throw new Error("Resposta da IA não estava em JSON válido.");
+    }
+    let candidate = cleaned.slice(start, end + 1);
+    try {
+      return JSON.parse(candidate) as KitOutput;
+    } catch {
+      candidate = candidate.replace(/,\s*}/g, "}").replace(/,\s*]/g, "]").replace(/[\x00-\x1F\x7F]/g, " ");
+      return JSON.parse(candidate) as KitOutput;
+    }
+  }
+}
+
 export const gerarKitPublicacao = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => Input.parse(input))
   .handler(async ({ data }): Promise<KitOutput> => {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey || !apiKey.trim()) {
+    const geminiKey = process.env.GEMINI_API_KEY?.trim();
+    const anthropicKey = process.env.ANTHROPIC_API_KEY?.trim();
+    if (!geminiKey && !anthropicKey) {
       throw new Error(
-        "A chave da Anthropic (ANTHROPIC_API_KEY) não foi configurada. Adicione o secret no backend antes de gerar o kit.",
+        "Nenhuma chave de IA configurada. Adicione GEMINI_API_KEY (grátis, Google AI Studio) ou ANTHROPIC_API_KEY nos secrets do backend.",
       );
     }
 
@@ -70,16 +135,29 @@ export const gerarKitPublicacao = createServerFn({ method: "POST" })
       "Conteúdo mestre:",
       data.conteudo,
       "",
+      "IMPORTANTE: respeite RIGOROSAMENTE o formato de cada canal descrito nas especificações — Stories com exatamente 3 telas separadas por \"---\"; Reels com gancho nos primeiros 125 caracteres; LinkedIn mais formal com até 3 hashtags ao final; E-mail no formato \"ASSUNTO: ...\" e \"CORPO: ...\". Cada canal deve sair no seu próprio padrão, não repita a mesma legenda do feed.",
       "Responda EXCLUSIVAMENTE com o objeto JSON. Sem texto antes, sem texto depois, sem markdown.",
     ]
       .filter(Boolean)
       .join("\n");
 
+    if (geminiKey) {
+      const r = await chamarGemini(geminiKey, SYSTEM, userPrompt);
+      await logGeminiUsage({
+        modulo: "kit",
+        operacao: "kit_publicacao",
+        tokens_input: r.inTok,
+        tokens_output: r.outTok,
+        detalhes: { linha: data.linha ?? null, tom: data.tom ?? null, chars: data.conteudo.length, motor: "gemini" },
+      });
+      return parseKit(r.text);
+    }
+
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": apiKey,
+        "x-api-key": anthropicKey!,
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
@@ -105,28 +183,10 @@ export const gerarKitPublicacao = createServerFn({ method: "POST" })
       operacao: "kit_publicacao",
       tokens_input: json?.usage?.input_tokens ?? 0,
       tokens_output: json?.usage?.output_tokens ?? 0,
-      detalhes: { linha: data.linha ?? null, tom: data.tom ?? null, chars: data.conteudo.length },
+      detalhes: { linha: data.linha ?? null, tom: data.tom ?? null, chars: data.conteudo.length, motor: "anthropic" },
     });
     if (stopReason === "max_tokens") {
       throw new Error("A resposta da IA foi cortada por limite de tokens. Tente novamente com um conteúdo menor.");
     }
-    let parsed: KitOutput;
-    try {
-      parsed = JSON.parse(content);
-    } catch {
-      const cleaned = content.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
-      const start = cleaned.indexOf("{");
-      const end = cleaned.lastIndexOf("}");
-      if (start === -1 || end === -1 || end <= start) {
-        throw new Error("Resposta da IA não estava em JSON válido.");
-      }
-      let candidate = cleaned.slice(start, end + 1);
-      try {
-        parsed = JSON.parse(candidate);
-      } catch {
-        candidate = candidate.replace(/,\s*}/g, "}").replace(/,\s*]/g, "]").replace(/[\x00-\x1F\x7F]/g, " ");
-        parsed = JSON.parse(candidate);
-      }
-    }
-    return parsed;
+    return parseKit(content);
   });

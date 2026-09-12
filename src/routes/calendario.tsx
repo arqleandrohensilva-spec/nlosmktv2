@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/page-header";
 import { LINHAS, FORMATOS, STATUS, LINHA_BADGE } from "@/lib/nl-brand";
 import { gerarPlanoMensal, type PlanoItem } from "@/lib/plano.functions";
 import { useState, useMemo } from "react";
-import { Plus, X, AlertTriangle, Sparkles, Loader2, ArrowRight, Heart, MessageCircle, Send, Bookmark } from "lucide-react";
+import { Plus, X, AlertTriangle, Sparkles, Loader2, ArrowRight, Heart, MessageCircle, Send, Bookmark, ThumbsUp, Repeat2 } from "lucide-react";
 import { signBibliotecaUrls } from "@/components/biblioteca-picker";
 import { toast } from "sonner";
 
@@ -412,7 +412,8 @@ function Section({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
-// Fonte do sistema — o mockup imita a interface REAL do Instagram, não a marca NL.
+// Fonte do sistema — os mockups imitam as interfaces REAIS de cada canal
+// (Instagram, LinkedIn, e-mail), não a identidade da marca NL.
 const FONTE_SISTEMA =
   'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
@@ -429,10 +430,14 @@ const LEGENDA_LABELS: Record<string, string> = {
   stories: "Stories",
   reels: "Reels",
   linkedin: "LinkedIn",
+  email: "E-mail",
 };
 
+// Ordem preferida de exibição das abas de canal.
+const ORDEM_CANAIS = ["feed", "stories", "reels", "linkedin", "email"];
+
 // copy_legenda pode ser: (a) JSON string com variantes por canal
-// {"feed": "...", "stories": "...", "reels": "...", "linkedin": "..."};
+// {"feed": "...", "stories": "...", "reels": "...", "linkedin": "...", "email": "..."};
 // (b) já um objeto; ou (c) uma string simples (posts antigos). Resolve os 3 casos.
 function resolverLegenda(
   raw: unknown,
@@ -467,6 +472,21 @@ function resolverLegenda(
   return { variantes: null, chaveInicial: null, textoSimples: original };
 }
 
+// Email do kit vem como "ASSUNTO: ...\nCORPO: ...".
+function parseEmailKit(raw: string): { assunto: string; corpo: string } {
+  const assunto = raw.match(/ASSUNTO:\s*([^\n]*)/i)?.[1]?.trim() ?? "";
+  const corpo = raw.match(/CORPO:\s*([\s\S]*)/i)?.[1]?.trim() ?? raw;
+  return { assunto, corpo };
+}
+
+// Stories vem como telas separadas por "---".
+function telasStories(raw: string): string[] {
+  return raw
+    .split(/\n?---\n?/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
+
 function LegendaComPreview({ post }: { post: any }) {
   const { variantes, chaveInicial, textoSimples } = useMemo(
     () => resolverLegenda(post.copy_legenda, post.formato),
@@ -474,66 +494,34 @@ function LegendaComPreview({ post }: { post: any }) {
   );
   const [aba, setAba] = useState<string>(chaveInicial ?? "");
 
+  // Canal ativo: a aba escolhida quando há variantes; senão deriva do formato.
+  const canal = variantes
+    ? aba || chaveInicial || "feed"
+    : LEGENDA_CHAVE_POR_FORMATO[post.formato] ?? "feed";
+
   const legendaTexto = variantes
-    ? variantes[aba] ?? (chaveInicial ? variantes[chaveInicial] : "") ?? ""
+    ? variantes[canal] ?? (chaveInicial ? variantes[chaveInicial] : "") ?? ""
     : textoSimples;
 
-  const vertical = post.formato === "reels" || post.formato === "stories";
-  const chaves = variantes ? Object.keys(variantes) : [];
+  // Abas na ordem preferida, mais quaisquer chaves extras não previstas.
+  const chaves = variantes
+    ? [
+        ...ORDEM_CANAIS.filter((k) => variantes[k]),
+        ...Object.keys(variantes).filter((k) => !ORDEM_CANAIS.includes(k)),
+      ]
+    : [];
 
   return (
     <div className="space-y-5">
-      {/* Prévia visual — imita a interface real do Instagram (fonte do sistema). */}
+      {/* Prévia visual — imita a interface real do canal ativo (fonte do sistema). */}
       <div>
         <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)] mb-2">
-          PRÉVIA NO INSTAGRAM
+          PRÉVIA — {(LEGENDA_LABELS[canal] ?? canal).toUpperCase()}
         </div>
-        <div
-          className="max-w-[360px] rounded-lg border border-[color:var(--divisoria)] overflow-hidden bg-white"
-          style={{ fontFamily: FONTE_SISTEMA }}
-        >
-          {/* Cabeçalho */}
-          <div className="flex items-center gap-2.5 px-3 py-2.5">
-            <div
-              className="h-8 w-8 rounded-full flex items-center justify-center text-white text-[11px] font-semibold"
-              style={{ backgroundColor: "#8B7355" }}
-            >
-              NL
-            </div>
-            <span className="text-[13px] font-semibold" style={{ color: "#262626" }}>
-              nlarquitetos
-            </span>
-          </div>
-
-          {/* Imagem (1:1 feed/carrossel, 9:16 reels/stories) */}
-          <div
-            className={vertical ? "aspect-[9/16]" : "aspect-square"}
-            style={{ backgroundColor: "#efefef" }}
-          >
-            {post.imagem_signed_url ? (
-              <img src={post.imagem_signed_url} alt="" className="w-full h-full object-cover" />
-            ) : null}
-          </div>
-
-          {/* Ações (decorativas) */}
-          <div className="flex items-center px-3 pt-2.5">
-            <div className="flex items-center gap-4">
-              <Heart className="h-6 w-6" strokeWidth={1.8} style={{ color: "#262626" }} />
-              <MessageCircle className="h-6 w-6" strokeWidth={1.8} style={{ color: "#262626" }} />
-              <Send className="h-6 w-6" strokeWidth={1.8} style={{ color: "#262626" }} />
-            </div>
-            <Bookmark className="h-6 w-6 ml-auto" strokeWidth={1.8} style={{ color: "#262626" }} />
-          </div>
-
-          {/* Legenda no padrão do Instagram: username em negrito + texto */}
-          <div className="px-3 py-2.5 text-[13px] leading-snug" style={{ color: "#262626" }}>
-            <span className="font-semibold mr-1.5">nlarquitetos</span>
-            <span className="whitespace-pre-wrap">{legendaTexto}</span>
-          </div>
-        </div>
+        <PreviewCanal canal={canal} texto={legendaTexto} imagem={post.imagem_signed_url} />
       </div>
 
-      {/* Texto completo + seletor de variantes */}
+      {/* Texto no padrão do canal + seletor de variantes */}
       <div>
         <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)] mb-2">
           LEGENDA
@@ -545,7 +533,7 @@ function LegendaComPreview({ post }: { post: any }) {
                 key={k}
                 onClick={() => setAba(k)}
                 className={`px-2.5 py-1 text-[11px] rounded-[4px] border transition-colors ${
-                  aba === k
+                  canal === k
                     ? "bg-[color:var(--graphite)] text-white border-[color:var(--graphite)]"
                     : "bg-white text-[color:var(--graphite)] border-[color:var(--divisoria)] hover:border-[color:var(--bronze)]"
                 }`}
@@ -555,8 +543,251 @@ function LegendaComPreview({ post }: { post: any }) {
             ))}
           </div>
         )}
-        <p className="whitespace-pre-wrap text-[color:var(--graphite)] leading-relaxed">{legendaTexto}</p>
+        <ConteudoCanal canal={canal} texto={legendaTexto} />
       </div>
     </div>
   );
+}
+
+// Mockup visual por canal.
+function PreviewCanal({ canal, texto, imagem }: { canal: string; texto: string; imagem?: string }) {
+  if (canal === "linkedin") return <PreviewLinkedIn texto={texto} imagem={imagem} />;
+  if (canal === "email") return <PreviewEmail texto={texto} />;
+  return <PreviewInstagram canal={canal} texto={texto} imagem={imagem} />;
+}
+
+function PreviewInstagram({ canal, texto, imagem }: { canal: string; texto: string; imagem?: string }) {
+  // Stories: quadro cheio 9:16 com barras de progresso e a Tela 1 sobreposta.
+  if (canal === "stories") {
+    const telas = telasStories(texto);
+    const primeira = telas[0] ?? texto;
+    return (
+      <div
+        className="relative max-w-[300px] aspect-[9/16] rounded-lg overflow-hidden border border-[color:var(--divisoria)]"
+        style={{ fontFamily: FONTE_SISTEMA, backgroundColor: imagem ? "#000" : "#b9b4ac" }}
+      >
+        {imagem && <img src={imagem} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+        <div
+          className="absolute inset-0"
+          style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.45), rgba(0,0,0,0.05) 35%, rgba(0,0,0,0.45))" }}
+        />
+        <div className="absolute top-2 left-2 right-2 flex gap-1">
+          {(telas.length ? telas : [primeira]).map((_, i) => (
+            <div
+              key={i}
+              className="h-0.5 flex-1 rounded-full"
+              style={{ backgroundColor: i === 0 ? "#fff" : "rgba(255,255,255,0.4)" }}
+            />
+          ))}
+        </div>
+        <div className="absolute top-5 left-2 right-2 flex items-center gap-2">
+          <div
+            className="h-7 w-7 rounded-full flex items-center justify-center text-white text-[10px] font-semibold"
+            style={{ backgroundColor: "#8B7355", border: "2px solid #fff" }}
+          >
+            NL
+          </div>
+          <span className="text-[12px] font-semibold text-white">nlarquitetos</span>
+        </div>
+        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 px-5 text-center">
+          <span
+            className="text-white text-[15px] font-semibold leading-snug whitespace-pre-wrap"
+            style={{ textShadow: "0 1px 6px rgba(0,0,0,0.55)" }}
+          >
+            {primeira}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // Feed (1:1) e Reels (9:16) — chrome padrão do Instagram.
+  const vertical = canal === "reels";
+  return (
+    <div
+      className="max-w-[360px] rounded-lg border border-[color:var(--divisoria)] overflow-hidden bg-white"
+      style={{ fontFamily: FONTE_SISTEMA }}
+    >
+      <div className="flex items-center gap-2.5 px-3 py-2.5">
+        <div
+          className="h-8 w-8 rounded-full flex items-center justify-center text-white text-[11px] font-semibold"
+          style={{ backgroundColor: "#8B7355" }}
+        >
+          NL
+        </div>
+        <span className="text-[13px] font-semibold" style={{ color: "#262626" }}>
+          nlarquitetos
+        </span>
+        {canal === "reels" && (
+          <span className="ml-auto text-[11px]" style={{ color: "#8e8e8e" }}>
+            Reels
+          </span>
+        )}
+      </div>
+
+      <div className={vertical ? "aspect-[9/16]" : "aspect-square"} style={{ backgroundColor: "#efefef" }}>
+        {imagem ? <img src={imagem} alt="" className="w-full h-full object-cover" /> : null}
+      </div>
+
+      <div className="flex items-center px-3 pt-2.5">
+        <div className="flex items-center gap-4">
+          <Heart className="h-6 w-6" strokeWidth={1.8} style={{ color: "#262626" }} />
+          <MessageCircle className="h-6 w-6" strokeWidth={1.8} style={{ color: "#262626" }} />
+          <Send className="h-6 w-6" strokeWidth={1.8} style={{ color: "#262626" }} />
+        </div>
+        <Bookmark className="h-6 w-6 ml-auto" strokeWidth={1.8} style={{ color: "#262626" }} />
+      </div>
+
+      <div className="px-3 py-2.5 text-[13px] leading-snug line-clamp-2" style={{ color: "#262626" }}>
+        <span className="font-semibold mr-1.5">nlarquitetos</span>
+        <span className="whitespace-pre-wrap">{texto}</span>
+      </div>
+    </div>
+  );
+}
+
+function PreviewLinkedIn({ texto, imagem }: { texto: string; imagem?: string }) {
+  return (
+    <div
+      className="max-w-[400px] rounded-lg border border-[color:var(--divisoria)] overflow-hidden bg-white"
+      style={{ fontFamily: FONTE_SISTEMA }}
+    >
+      <div className="flex items-start gap-2.5 px-3 py-3">
+        <div
+          className="h-11 w-11 rounded-full flex items-center justify-center text-white text-[13px] font-semibold shrink-0"
+          style={{ backgroundColor: "#8B7355" }}
+        >
+          NL
+        </div>
+        <div className="min-w-0">
+          <div className="text-[14px] font-semibold" style={{ color: "rgba(0,0,0,0.9)" }}>
+            NL Arquitetos
+          </div>
+          <div className="text-[12px]" style={{ color: "rgba(0,0,0,0.6)" }}>
+            Arquitetura e Interiores · São José dos Campos
+          </div>
+          <div className="text-[12px]" style={{ color: "rgba(0,0,0,0.6)" }}>
+            Agora · Público
+          </div>
+        </div>
+      </div>
+
+      <div
+        className="px-3 pb-3 text-[14px] whitespace-pre-wrap leading-relaxed"
+        style={{ color: "rgba(0,0,0,0.9)" }}
+      >
+        {texto}
+      </div>
+
+      {imagem && (
+        <div className="aspect-[1.91/1]" style={{ backgroundColor: "#efefef" }}>
+          <img src={imagem} alt="" className="w-full h-full object-cover" />
+        </div>
+      )}
+
+      <div
+        className="flex items-center justify-around px-2 py-1 border-t"
+        style={{ borderColor: "rgba(0,0,0,0.08)", color: "rgba(0,0,0,0.6)" }}
+      >
+        {[
+          { icon: <ThumbsUp className="h-4 w-4" />, label: "Gostei" },
+          { icon: <MessageCircle className="h-4 w-4" />, label: "Comentar" },
+          { icon: <Repeat2 className="h-4 w-4" />, label: "Compartilhar" },
+          { icon: <Send className="h-4 w-4" />, label: "Enviar" },
+        ].map((a) => (
+          <span key={a.label} className="inline-flex items-center gap-1.5 text-[12px] py-1.5">
+            {a.icon} {a.label}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PreviewEmail({ texto }: { texto: string }) {
+  const { assunto, corpo } = parseEmailKit(texto);
+  return (
+    <div
+      className="max-w-[440px] rounded-lg border border-[color:var(--divisoria)] overflow-hidden bg-white"
+      style={{ fontFamily: FONTE_SISTEMA }}
+    >
+      <div className="px-4 py-3 border-b" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
+        <div className="text-[15px] font-semibold" style={{ color: "#202124" }}>
+          {assunto || "(sem assunto)"}
+        </div>
+        <div className="flex items-center gap-2 mt-2">
+          <div
+            className="h-8 w-8 rounded-full flex items-center justify-center text-white text-[11px] font-semibold shrink-0"
+            style={{ backgroundColor: "#8B7355" }}
+          >
+            NL
+          </div>
+          <div className="text-[12px] leading-tight" style={{ color: "#5f6368" }}>
+            <span style={{ color: "#202124", fontWeight: 600 }}>NL Arquitetos</span>{" "}
+            &lt;contato@nlarquitetos.com.br&gt;
+            <br />
+            para mim
+          </div>
+        </div>
+      </div>
+      <div className="px-4 py-3 text-[14px] whitespace-pre-wrap leading-relaxed" style={{ color: "#202124" }}>
+        {corpo}
+      </div>
+    </div>
+  );
+}
+
+// Texto completo no padrão de cada canal.
+function ConteudoCanal({ canal, texto }: { canal: string; texto: string }) {
+  if (canal === "stories") {
+    const telas = telasStories(texto);
+    return (
+      <div className="space-y-2">
+        {(telas.length ? telas : [texto]).map((tela, i) => (
+          <div
+            key={i}
+            className="border border-[color:var(--divisoria)] rounded-[4px] bg-[color:var(--gelo)] px-3 py-2"
+          >
+            <div className="font-mono text-[9px] tracking-widest text-[color:var(--bronze)] mb-1">
+              TELA {i + 1}
+            </div>
+            <div className="whitespace-pre-wrap text-[color:var(--graphite)]">{tela}</div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (canal === "reels") {
+    return (
+      <div>
+        <p className="whitespace-pre-wrap text-[color:var(--graphite)] leading-relaxed">
+          <span className="bg-[color:var(--bege)]">{texto.slice(0, 125)}</span>
+          {texto.slice(125)}
+        </p>
+        <p className="mt-2 text-xs text-[color:var(--muted-foreground)]">
+          As primeiras 125 caracteres (destacadas) aparecem antes do "ver mais".
+        </p>
+      </div>
+    );
+  }
+
+  if (canal === "email") {
+    const { assunto, corpo } = parseEmailKit(texto);
+    return (
+      <div className="space-y-3">
+        <div>
+          <div className="font-mono text-[9px] tracking-widest text-[color:var(--bronze)] mb-1">ASSUNTO</div>
+          <div className="text-[color:var(--graphite)]">{assunto || "—"}</div>
+        </div>
+        <div>
+          <div className="font-mono text-[9px] tracking-widest text-[color:var(--bronze)] mb-1">CORPO</div>
+          <p className="whitespace-pre-wrap text-[color:var(--graphite)] leading-relaxed">{corpo}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // feed / linkedin / fallback
+  return <p className="whitespace-pre-wrap text-[color:var(--graphite)] leading-relaxed">{texto}</p>;
 }
