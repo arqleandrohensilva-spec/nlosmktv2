@@ -323,83 +323,7 @@ export type Database = {
         }
         Relationships: []
       }
-      objecoes: {
-        Row: {
-          categoria: string | null
-          created_at: string
-          id: string
-          post_id: string | null
-          respondida: boolean
-          texto: string
-        }
-        Insert: {
-          categoria?: string | null
-          created_at?: string
-          id?: string
-          post_id?: string | null
-          respondida?: boolean
-          texto: string
-        }
-        Update: {
-          categoria?: string | null
-          created_at?: string
-          id?: string
-          post_id?: string | null
-          respondida?: boolean
-          texto?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "objecoes_post_id_fkey"
-            columns: ["post_id"]
-            isOneToOne: false
-            referencedRelation: "posts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      performance: {
-        Row: {
-          comentarios: number
-          compartilhamentos: number
-          curtidas: number
-          id: string
-          post_id: string
-          registrado_em: string
-          salvamentos: number
-          views: number
-        }
-        Insert: {
-          comentarios?: number
-          compartilhamentos?: number
-          curtidas?: number
-          id?: string
-          post_id: string
-          registrado_em?: string
-          salvamentos?: number
-          views?: number
-        }
-        Update: {
-          comentarios?: number
-          compartilhamentos?: number
-          curtidas?: number
-          id?: string
-          post_id?: string
-          registrado_em?: string
-          salvamentos?: number
-          views?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "performance_post_id_fkey"
-            columns: ["post_id"]
-            isOneToOne: false
-            referencedRelation: "posts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      posts: {
+      mkt_posts: {
         Row: {
           ano: number | null
           briefing_visual: string | null
@@ -463,6 +387,82 @@ export type Database = {
             columns: ["dor_id"]
             isOneToOne: false
             referencedRelation: "dores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      objecoes: {
+        Row: {
+          categoria: string | null
+          created_at: string
+          id: string
+          post_id: string | null
+          respondida: boolean
+          texto: string
+        }
+        Insert: {
+          categoria?: string | null
+          created_at?: string
+          id?: string
+          post_id?: string | null
+          respondida?: boolean
+          texto: string
+        }
+        Update: {
+          categoria?: string | null
+          created_at?: string
+          id?: string
+          post_id?: string | null
+          respondida?: boolean
+          texto?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "objecoes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "mkt_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance: {
+        Row: {
+          comentarios: number
+          compartilhamentos: number
+          curtidas: number
+          id: string
+          post_id: string
+          registrado_em: string
+          salvamentos: number
+          views: number
+        }
+        Insert: {
+          comentarios?: number
+          compartilhamentos?: number
+          curtidas?: number
+          id?: string
+          post_id: string
+          registrado_em?: string
+          salvamentos?: number
+          views?: number
+        }
+        Update: {
+          comentarios?: number
+          compartilhamentos?: number
+          curtidas?: number
+          id?: string
+          post_id?: string
+          registrado_em?: string
+          salvamentos?: number
+          views?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "mkt_posts"
             referencedColumns: ["id"]
           },
         ]
