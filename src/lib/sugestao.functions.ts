@@ -134,6 +134,100 @@ function parseSugestao(content: string, idsValidos: Set<string>): SugestaoPost {
   };
 }
 
+const ObsInput = z.object({
+  dor_titulo: z.string().optional(),
+  dor_descricao: z.string().optional(),
+  linha: z.string().optional(),
+  formato: z.string().optional(),
+  projeto_id: z.string().optional(),
+  observacao_atual: z.string().optional(),
+});
+
+const LINHA_DESC: Record<string, string> = {
+  A: "Arquitetura residencial",
+  B: "Design de interiores",
+  AB: "Arquitetura e interiores integrados",
+  C: "Arquitetura comercial",
+};
+
+function parseObservacao(content: string): string {
+  try {
+    const raw = JSON.parse(content);
+    if (typeof raw?.observacao === "string") return raw.observacao.trim();
+  } catch {
+    const cleaned = content.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start !== -1 && end > start) {
+      try {
+        const raw = JSON.parse(cleaned.slice(start, end + 1));
+        if (typeof raw?.observacao === "string") return raw.observacao.trim();
+      } catch {
+        /* cai no fallback abaixo */
+      }
+    }
+    return cleaned;
+  }
+  return content.trim();
+}
+
+// Gera uma observação/direcionamento para o Motor de Copy a partir da dor,
+// formato e linha — considerando o briefing do projeto do NL OS quando escolhido.
+export const gerarObservacao = createServerFn({ method: "POST" })
+  .middleware([withExternalAuth])
+  .inputValidator((input: unknown) => ObsInput.parse(input))
+  .handler(async ({ data, context }): Promise<{ observacao: string }> => {
+    const key = process.env.GEMINI_API_KEY?.trim();
+    if (!key) {
+      throw new Error("Configure GEMINI_API_KEY (grátis, Google AI Studio) para gerar a observação com IA.");
+    }
+    const client = sb(context.accessToken);
+
+    let briefingTexto = "";
+    if (data.projeto_id) {
+      const { data: briefs } = await client
+        .from("briefings_completos")
+        .select("respostas, tipo, criado_em")
+        .eq("projeto_id", data.projeto_id)
+        .order("criado_em", { ascending: false })
+        .limit(1);
+      const b: any = briefs?.[0];
+      if (b) briefingTexto = resumoBriefing(b.respostas);
+    }
+
+    const linhaTxt = data.linha ? (LINHA_DESC[data.linha] ?? data.linha) : "";
+
+    const system =
+      "Você é o estrategista de conteúdo da NL Arquitetos. Sua tarefa é escrever uma OBSERVAÇÃO curta e prática (um direcionamento) para o motor de copy, dizendo o ângulo, a ênfase e o que destacar num post — a partir da dor da persona, do formato e da linha de negócio informados. Quando houver briefing de um projeto real, ancore a observação em detalhes concretos dele (sem inventar dados). A observação deve ter 1 a 3 frases, tom técnico e sóbrio (padrão NL: sem emoji, sem superlativo vazio, sem urgência artificial, nunca 'preto puro'). Responda SOMENTE com JSON.";
+
+    const prompt = [
+      data.dor_titulo ? `Dor da persona: ${data.dor_titulo}` : "Dor da persona: (não informada)",
+      data.dor_descricao ? `Descrição da dor: ${data.dor_descricao}` : "",
+      linhaTxt ? `Linha de negócio: ${linhaTxt}` : "",
+      data.formato ? `Formato do post: ${data.formato}` : "",
+      briefingTexto ? `Briefing do projeto (NL OS):\n${briefingTexto}` : "Sem projeto do NL OS selecionado — baseie-se na dor, formato e linha.",
+      data.observacao_atual ? `Observação atual do usuário (aprimore/complemente sem repetir):\n${data.observacao_atual}` : "",
+      "",
+      'Responda EXCLUSIVAMENTE com este JSON: {"observacao": "<direcionamento de 1 a 3 frases>"}',
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const r = await chamarGemini(key, system, prompt);
+
+    await logGeminiUsage({
+      modulo: "sugestao",
+      operacao: "gerar_observacao",
+      tokens_input: r.inTok,
+      tokens_output: r.outTok,
+      detalhes: { projeto_id: data.projeto_id, linha: data.linha, formato: data.formato },
+    });
+
+    const observacao = parseObservacao(r.text);
+    if (!observacao) throw new Error("A IA não retornou uma observação. Tente novamente.");
+    return { observacao };
+  });
+
 export const sugerirDorEPost = createServerFn({ method: "POST" })
   .middleware([withExternalAuth])
   .inputValidator((input: unknown) => Input.parse(input))

@@ -4,13 +4,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/lib/supabaseExternal";
 import { gerarCopy, type CopyOutput } from "@/lib/copy.functions";
-import { sugerirDorEPost, type SugestaoPost } from "@/lib/sugestao.functions";
+import { sugerirDorEPost, gerarObservacao, type SugestaoPost } from "@/lib/sugestao.functions";
 import { getMarcaConfig } from "@/lib/marca-config.functions";
 import { gerarPromptImagem } from "@/lib/imagem.functions";
 import { validarPeca, type ValidarOutput } from "@/lib/validar.functions";
 import { PageHeader } from "@/components/page-header";
 import { LINHAS, FORMATOS } from "@/lib/nl-brand";
-import { Loader2, Copy, AlertTriangle, Image as ImageIcon, X } from "lucide-react";
+import { Loader2, Copy, AlertTriangle, Image as ImageIcon, X, Sparkles } from "lucide-react";
 import { BibliotecaPicker, type BibliotecaImagemLite } from "@/components/biblioteca-picker";
 import { AgendarButton } from "@/components/agendar-modal";
 import { toast } from "sonner";
@@ -32,6 +32,7 @@ function MotorCopy() {
   const navigate = useNavigate();
   const gerar = useServerFn(gerarCopy);
   const sugerir = useServerFn(sugerirDorEPost);
+  const gerarObs = useServerFn(gerarObservacao);
   const carregarMarca = useServerFn(getMarcaConfig);
   const gerarPrompt = useServerFn(gerarPromptImagem);
   const validar = useServerFn(validarPeca);
@@ -149,6 +150,27 @@ function MotorCopy() {
       }),
     onSuccess: (s) => setSugestao(s),
     onError: (e: any) => toast.error(e?.message ?? "Não foi possível gerar a sugestão."),
+  });
+
+  const observacaoMut = useMutation({
+    mutationFn: async () => {
+      const projeto = (projetosNLOS ?? []).find((p: any) => String(p.id) === projetoNLOS);
+      return gerarObs({
+        data: {
+          dor_titulo: dorSelecionada?.titulo,
+          dor_descricao: dorSelecionada?.descricao ?? undefined,
+          linha,
+          formato,
+          projeto_id: projeto?.projeto_id ?? undefined,
+          observacao_atual: observacao || undefined,
+        },
+      });
+    },
+    onSuccess: (r) => {
+      setObservacao(r.observacao);
+      toast.success("Observação gerada pela IA.");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Falha ao gerar a observação."),
   });
 
   const cadastrarDorMut = useMutation({
@@ -431,7 +453,25 @@ function MotorCopy() {
                 ) : null}
               </div>
             )}
-            <Field label="Observação (opcional)">
+            <div className="block">
+              <div className="flex items-center justify-between mb-2">
+                <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)]">
+                  OBSERVAÇÃO (OPCIONAL)
+                </div>
+                <button
+                  type="button"
+                  disabled={observacaoMut.isPending || !dorId}
+                  onClick={() => observacaoMut.mutate()}
+                  title={!dorId ? "Selecione uma dor primeiro" : "Gerar observação com IA a partir da dor, formato e linha"}
+                  className="inline-flex items-center gap-1.5 rounded-[4px] border border-[color:var(--bronze)]/50 bg-white px-2.5 py-1 text-[11px] text-[color:var(--bronze)] hover:bg-[color:var(--bege)] disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {observacaoMut.isPending ? (
+                    <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Gerando…</>
+                  ) : (
+                    <><Sparkles className="h-3.5 w-3.5" /> IA</>
+                  )}
+                </button>
+              </div>
               <textarea
                 value={observacao}
                 onChange={(e) => setObservacao(e.target.value)}
@@ -439,7 +479,11 @@ function MotorCopy() {
                 className="w-full rounded-[4px] border border-[color:var(--divisoria)] bg-[color:var(--gelo)] px-3 py-2 text-sm focus:outline-none focus:border-[color:var(--bronze)]"
                 placeholder="Ex: enfatizar o caso do terreno em condomínio…"
               />
-            </Field>
+              <p className="mt-1.5 text-xs text-[color:var(--muted-foreground)]">
+                Clique em <span className="text-[color:var(--bronze)]">IA</span> para gerar um direcionamento com base na dor, formato e linha
+                {projetoNLOS ? " — levando o projeto do NL OS em conta" : ""}.
+              </p>
+            </div>
             <Field label="Imagem do projeto (opcional)">
               {imagem ? (
                 <div className="flex items-center gap-3 border border-[color:var(--divisoria)] rounded-[4px] bg-white p-2">
