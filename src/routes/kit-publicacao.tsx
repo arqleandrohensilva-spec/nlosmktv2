@@ -273,10 +273,7 @@ function KitPublicacaoPage() {
                         <div className="font-mono text-[9px] tracking-widest text-[color:var(--bronze)] mb-1">
                           ASSUNTO
                         </div>
-                        <div
-                          className="text-[color:var(--graphite)]"
-                          style={{ fontFamily: "Georgia, serif", fontSize: 16 }}
-                        >
+                        <div className="text-[color:var(--graphite)]" style={{ fontSize: 16 }}>
                           {assunto}
                         </div>
                       </div>
@@ -356,10 +353,7 @@ function CanalCard({
           </span>
         )}
       </div>
-      <div
-        className="text-sm text-[color:var(--graphite)] flex-1 leading-relaxed"
-        style={{ fontFamily: "Georgia, serif" }}
-      >
+      <div className="text-sm text-[color:var(--graphite)] flex-1 leading-relaxed">
         {children}
       </div>
       {footer && <div className="mt-3 text-xs">{footer}</div>}

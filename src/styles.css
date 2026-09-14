@@ -63,11 +63,12 @@
   --color-travertino: var(--travertino);
   --color-divisoria: var(--divisoria);
   --color-graphite: var(--graphite);
-  --font-serif: "Cormorant Garamond", Georgia, serif;
-  --font-sans: "DM Mono", ui-monospace, monospace;
-  --font-mono: "DM Mono", ui-monospace, monospace;
-  --font-display: "Cormorant Garamond", Georgia, serif;
-  --font-cormorant: "Cormorant Garamond", Georgia, serif;
+  /* Tipografia unificada: Inter em tudo (leitura). DM Mono aposentada. */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-cormorant: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 :root {
@@ -135,6 +136,8 @@
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-serif);
     font-weight: 700;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
     color: var(--graphite);
   }
 
