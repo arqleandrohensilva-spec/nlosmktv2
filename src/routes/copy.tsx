@@ -673,7 +673,11 @@ function MotorCopy() {
                 onClick={() =>
                   navigate({
                     to: "/kit-publicacao",
-                    search: { conteudo: output.copy_legenda } as never,
+                    search: {
+                      conteudo: output.copy_legenda,
+                      dor: dorSelecionada?.titulo,
+                      linha,
+                    } as never,
                   })
                 }
               >
