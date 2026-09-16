@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { gerarKitPublicacao, type KitOutput } from "@/lib/kit.functions";
+import { comEsperaDeCota } from "@/lib/reintento-cota";
 import { PageHeader } from "@/components/page-header";
 import { LINHAS, PILARES } from "@/lib/nl-brand";
 import { supabase } from "@/lib/supabaseExternal";
@@ -96,8 +97,16 @@ function KitPublicacaoPage() {
 
   const mut = useMutation({
     mutationFn: async () =>
-      gerar({ data: { conteudo, linha: linha || undefined, tom: tom || undefined, imagem_contexto: imagem?.descricao_tecnica || undefined } }),
+      comEsperaDeCota(
+        () =>
+          gerar({ data: { conteudo, linha: linha || undefined, tom: tom || undefined, imagem_contexto: imagem?.descricao_tecnica || undefined } }),
+        {
+          onEsperar: (s) =>
+            toast.loading(`Cota do Gemini cheia — aguardando liberar e tentando de novo… ${s}s`, { id: "cota-kit" }),
+        },
+      ),
     onSuccess: (data) => {
+      toast.dismiss("cota-kit");
       // Mantém o canal original da copy exatamente como aprovado.
       const final = canalFixo && legendaFixa ? { ...data, [canalFixo.key]: legendaFixa } : data;
       setResultado(final);
@@ -107,7 +116,10 @@ function KitPublicacaoPage() {
         setCampanha(slugCampanha(base) || `campanha_linha_${(linha || "a").toLowerCase()}`);
       }
     },
-    onError: (err: any) => toast.error(err?.message ?? "Erro ao gerar kit"),
+    onError: (err: any) => {
+      toast.dismiss("cota-kit");
+      toast.error(err?.message ?? "Erro ao gerar kit");
+    },
   });
 
   const criarCampanhas = useMutation({

@@ -8,6 +8,7 @@ import { sugerirDorEPost, gerarObservacao, type SugestaoPost } from "@/lib/suges
 import { getMarcaConfig } from "@/lib/marca-config.functions";
 import { gerarPromptImagem } from "@/lib/imagem.functions";
 import { validarPeca, type ValidarOutput } from "@/lib/validar.functions";
+import { comEsperaDeCota } from "@/lib/reintento-cota";
 import { PageHeader } from "@/components/page-header";
 import { LINHAS, FORMATOS } from "@/lib/nl-brand";
 import { Loader2, Copy, AlertTriangle, Image as ImageIcon, X, Sparkles } from "lucide-react";
@@ -156,22 +157,30 @@ function MotorCopy() {
   const observacaoMut = useMutation({
     mutationFn: async () => {
       const projeto = (projetosNLOS ?? []).find((p: any) => String(p.id) === projetoNLOS);
-      return gerarObs({
-        data: {
-          dor_titulo: dorSelecionada?.titulo,
-          dor_descricao: dorSelecionada?.descricao ?? undefined,
-          linha,
-          formato,
-          projeto_id: projeto?.projeto_id ?? undefined,
-          observacao_atual: observacao || undefined,
-        },
-      });
+      return comEsperaDeCota(
+        () =>
+          gerarObs({
+            data: {
+              dor_titulo: dorSelecionada?.titulo,
+              dor_descricao: dorSelecionada?.descricao ?? undefined,
+              linha,
+              formato,
+              projeto_id: projeto?.projeto_id ?? undefined,
+              observacao_atual: observacao || undefined,
+            },
+          }),
+        { onEsperar: (s) => toast.loading(`Cota do Gemini cheia — aguardando e tentando de novo… ${s}s`, { id: "cota-obs" }) },
+      );
     },
     onSuccess: (r) => {
+      toast.dismiss("cota-obs");
       setObservacao(r.observacao);
       toast.success("Observação gerada pela IA.");
     },
-    onError: (e: any) => toast.error(e?.message ?? "Falha ao gerar a observação."),
+    onError: (e: any) => {
+      toast.dismiss("cota-obs");
+      toast.error(e?.message ?? "Falha ao gerar a observação.");
+    },
   });
 
   const cadastrarDorMut = useMutation({
@@ -209,26 +218,34 @@ function MotorCopy() {
   const gerarMut = useMutation({
     mutationFn: async () => {
       if (!dorSelecionada) throw new Error("Selecione uma dor");
-      return gerar({
-        data: {
-          linha: linha as any,
-          formato: formato as any,
-          dor_titulo: dorSelecionada.titulo,
-          dor_descricao: dorSelecionada.descricao ?? undefined,
-          observacao: observacao || undefined,
-          ajuste_raciocinio: ajusteRaciocinio || undefined,
-          imagem_contexto: imagem?.descricao_tecnica || undefined,
-        },
-      });
+      return comEsperaDeCota(
+        () =>
+          gerar({
+            data: {
+              linha: linha as any,
+              formato: formato as any,
+              dor_titulo: dorSelecionada.titulo,
+              dor_descricao: dorSelecionada.descricao ?? undefined,
+              observacao: observacao || undefined,
+              ajuste_raciocinio: ajusteRaciocinio || undefined,
+              imagem_contexto: imagem?.descricao_tecnica || undefined,
+            },
+          }),
+        { onEsperar: (s) => toast.loading(`Cota do Gemini cheia — aguardando e tentando de novo… ${s}s`, { id: "cota-copy" }) },
+      );
     },
     onSuccess: (data) => {
+      toast.dismiss("cota-copy");
       setOutput(data);
       setPromptGerado(null);
       setInstrucoesImagem("");
       setValidacao(null);
       setStep(3);
     },
-    onError: (err: any) => toast.error(err?.message ?? "Erro ao gerar copy"),
+    onError: (err: any) => {
+      toast.dismiss("cota-copy");
+      toast.error(err?.message ?? "Erro ao gerar copy");
+    },
   });
 
   const gerarPromptMut = useMutation({
