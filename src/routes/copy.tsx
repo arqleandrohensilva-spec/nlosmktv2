@@ -676,7 +676,7 @@ function MotorCopy() {
                     search: {
                       conteudo: [
                         output.copy_roteiro ? `ROTEIRO (Reels):\n${output.copy_roteiro}` : "",
-                        output.copy_legenda ? `LEGENDA (Feed):\n${output.copy_legenda}` : "",
+                        output.copy_legenda ? `LEGENDA:\n${output.copy_legenda}` : "",
                         output.copy_cta ? `CTA: ${output.copy_cta}` : "",
                         output.briefing_visual ? `BRIEFING VISUAL: ${output.briefing_visual}` : "",
                       ]
@@ -684,6 +684,8 @@ function MotorCopy() {
                         .join("\n\n"),
                       dor: dorSelecionada?.titulo,
                       linha,
+                      formato,
+                      legenda: output.copy_legenda,
                     } as never,
                   })
                 }

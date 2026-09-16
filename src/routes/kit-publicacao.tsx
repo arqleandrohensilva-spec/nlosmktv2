@@ -11,16 +11,26 @@ import { BibliotecaPicker, type BibliotecaImagemLite } from "@/components/biblio
 import { AgendarButton } from "@/components/agendar-modal";
 import { toast } from "sonner";
 
-type Search = { conteudo?: string; dor?: string; linha?: string };
+type Search = { conteudo?: string; dor?: string; linha?: string; formato?: string; legenda?: string };
 
 export const Route = createFileRoute("/kit-publicacao")({
   validateSearch: (s: Record<string, unknown>): Search => ({
     conteudo: typeof s.conteudo === "string" ? s.conteudo : undefined,
     dor: typeof s.dor === "string" ? s.dor : undefined,
     linha: typeof s.linha === "string" ? s.linha : undefined,
+    formato: typeof s.formato === "string" ? s.formato : undefined,
+    legenda: typeof s.legenda === "string" ? s.legenda : undefined,
   }),
   component: KitPublicacaoPage,
 });
+
+// Formato da copy -> qual canal do kit ela representa (fica travado, idêntico).
+const CANAL_POR_FORMATO: Record<string, { key: keyof KitOutput; label: string }> = {
+  reels: { key: "reels", label: "Reels" },
+  estatico: { key: "feed", label: "Feed" },
+  carrossel: { key: "feed", label: "Feed" },
+  stories: { key: "stories", label: "Stories" },
+};
 
 // Ligação MKT → NL Diagnóstico: cada canal vira um link UTM rastreável.
 const LANDING_DIAG = "https://diagnosticonlarquitetos.lovable.app";
@@ -78,13 +88,18 @@ function KitPublicacaoPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search.conteudo, search.linha]);
 
+  // Canal que veio da copy: fica travado (idêntico), os outros são gerados.
+  const canalFixo = search.formato ? CANAL_POR_FORMATO[search.formato] : undefined;
+  const legendaFixa = search.legenda?.trim() ?? "";
+
   const mut = useMutation({
     mutationFn: async () =>
       gerar({ data: { conteudo, linha: linha || undefined, tom: tom || undefined, imagem_contexto: imagem?.descricao_tecnica || undefined } }),
     onSuccess: (data) => {
-      setResultado(data);
+      // Mantém o canal original da copy exatamente como aprovado.
+      const final = canalFixo && legendaFixa ? { ...data, [canalFixo.key]: legendaFixa } : data;
+      setResultado(final);
       setCampanhasCriadas(false);
-      // Sugere um nome de campanha se ainda não houver (dor > primeiras palavras).
       if (!campanha) {
         const base = search.dor || conteudo.split(/\s+/).slice(0, 5).join(" ");
         setCampanha(slugCampanha(base) || `campanha_linha_${(linha || "a").toLowerCase()}`);
@@ -273,6 +288,11 @@ function KitPublicacaoPage() {
 
         {resultado && (
           <>
+            {canalFixo && legendaFixa && (
+              <div className="border border-[color:var(--bronze)]/40 rounded-lg bg-[color:var(--bege)] px-4 py-3 text-sm text-[color:var(--graphite)]">
+                <b>{canalFixo.label}</b> foi mantido igual à sua copy. Os outros canais foram criados na mesma temática.
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <CanalCard
                 icon={<Square className="h-4 w-4" />}
