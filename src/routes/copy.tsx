@@ -674,7 +674,14 @@ function MotorCopy() {
                   navigate({
                     to: "/kit-publicacao",
                     search: {
-                      conteudo: output.copy_legenda,
+                      conteudo: [
+                        output.copy_roteiro ? `ROTEIRO (Reels):\n${output.copy_roteiro}` : "",
+                        output.copy_legenda ? `LEGENDA (Feed):\n${output.copy_legenda}` : "",
+                        output.copy_cta ? `CTA: ${output.copy_cta}` : "",
+                        output.briefing_visual ? `BRIEFING VISUAL: ${output.briefing_visual}` : "",
+                      ]
+                        .filter(Boolean)
+                        .join("\n\n"),
                       dor: dorSelecionada?.titulo,
                       linha,
                     } as never,

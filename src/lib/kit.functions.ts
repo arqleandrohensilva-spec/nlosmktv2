@@ -132,10 +132,11 @@ export const gerarKitPublicacao = createServerFn({ method: "POST" })
       data.linha ? `Linha de negócio: ${data.linha}` : "",
       data.tom ? `Tom do conteúdo: ${data.tom}` : "",
       data.imagem_contexto ? `Imagem de referência do projeto (descrição técnica): ${data.imagem_contexto}` : "",
-      "Conteúdo mestre:",
+      "Conteúdo mestre (pode conter ROTEIRO, LEGENDA, CTA e BRIEFING VISUAL já aprovados):",
       data.conteudo,
       "",
-      "IMPORTANTE: respeite RIGOROSAMENTE o formato de cada canal descrito nas especificações — Stories com exatamente 3 telas separadas por \"---\"; Reels com gancho nos primeiros 125 caracteres; LinkedIn mais formal com até 3 hashtags ao final; E-mail no formato \"ASSUNTO: ...\" e \"CORPO: ...\". Cada canal deve sair no seu próprio padrão, não repita a mesma legenda do feed.",
+      "FIDELIDADE (obrigatório): mantenha EXATAMENTE a mesma mensagem, ângulo, argumentos e CTA do conteúdo mestre. NÃO invente novos argumentos nem mude o sentido. Se o mestre trouxer LEGENDA, o Feed deve ser praticamente ela; se trouxer ROTEIRO, o Reels deve se basear nele; use o CTA fornecido. Seu trabalho é só REFORMATAR para cada canal, não reescrever o conteúdo.",
+      "IMPORTANTE: respeite RIGOROSAMENTE o formato de cada canal descrito nas especificações — Stories com exatamente 3 telas separadas por \"---\"; Reels com gancho nos primeiros 125 caracteres; LinkedIn mais formal com até 3 hashtags ao final; E-mail no formato \"ASSUNTO: ...\" e \"CORPO: ...\". Cada canal no seu próprio formato, mas fiel à mensagem do mestre.",
       "Responda EXCLUSIVAMENTE com o objeto JSON. Sem texto antes, sem texto depois, sem markdown.",
     ]
       .filter(Boolean)
