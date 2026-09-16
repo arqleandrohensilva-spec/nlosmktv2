@@ -81,6 +81,8 @@ function KitPublicacaoPage() {
   const [campanha, setCampanha] = useState(slugCampanha(search.dor ?? ""));
   const [urlDestino, setUrlDestino] = useState(LANDING_DIAG);
   const [campanhasCriadas, setCampanhasCriadas] = useState(false);
+  const [canaisSel, setCanaisSel] = useState<Record<string, boolean>>({});
+  const canalSelecionado = (k: keyof KitOutput) => canaisSel[k] !== false; // padrão: marcado
 
   useEffect(() => {
     if (search.conteudo && !conteudo) setConteudo(search.conteudo);
@@ -113,7 +115,8 @@ function KitPublicacaoPage() {
       if (!resultado) throw new Error("Gere o kit primeiro.");
       const camp = slugCampanha(campanha);
       if (!camp) throw new Error("Defina o nome da campanha.");
-      const linksVigentes = CANAIS_UTM.filter((c) => (resultado[c.key] ?? "").trim() !== "");
+      const linksVigentes = CANAIS_UTM.filter((c) => (resultado[c.key] ?? "").trim() !== "" && canalSelecionado(c.key));
+      if (linksVigentes.length === 0) throw new Error("Selecione ao menos um canal para rastrear.");
       const rows = linksVigentes.map((c) => ({
         origem: c.source,
         meio: c.medium,
@@ -425,17 +428,31 @@ function KitPublicacaoPage() {
                   )}
 
                   <div>
-                    <div className="font-mono text-[9px] tracking-widest text-[color:var(--bronze)] mb-2">LINKS GERADOS — 1 POR CANAL</div>
+                    <div className="font-mono text-[9px] tracking-widest text-[color:var(--bronze)] mb-2">CANAIS A RASTREAR — MARQUE ONDE VAI POSTAR</div>
                     <div className="space-y-2">
                       {CANAIS_UTM.filter((c) => (resultado[c.key] ?? "").trim() !== "").map((c) => {
+                        const sel = canalSelecionado(c.key);
                         const link = montarUrlUtm(urlDestino || LANDING_DIAG, c.source, c.medium, slugCampanha(campanha) || "campanha");
                         return (
-                          <div key={c.key} className="flex items-center gap-2 border border-[color:var(--divisoria)] rounded-[4px] bg-[color:var(--gelo)] px-3 py-2">
+                          <div key={c.key} className={`flex items-center gap-2 border rounded-[4px] px-3 py-2 ${sel ? "border-[color:var(--divisoria)] bg-[color:var(--gelo)]" : "border-[color:var(--divisoria)] bg-white opacity-60"}`}>
+                            <input
+                              type="checkbox"
+                              checked={sel}
+                              onChange={() => { setCanaisSel((p) => ({ ...p, [c.key]: !sel })); setCampanhasCriadas(false); }}
+                              className="shrink-0"
+                              aria-label={`Rastrear ${c.label}`}
+                            />
                             <span className="text-sm text-[color:var(--graphite)] min-w-[130px] shrink-0">{c.label}</span>
-                            <span className="flex-1 truncate text-xs font-mono text-[color:var(--muted-foreground)]">{link}</span>
-                            <button onClick={() => copiar(link)} className="text-[color:var(--travertino)] hover:text-[color:var(--bronze)] shrink-0" aria-label="Copiar link">
-                              <Copy className="h-4 w-4" />
-                            </button>
+                            {sel ? (
+                              <>
+                                <span className="flex-1 truncate text-xs font-mono text-[color:var(--muted-foreground)]">{link}</span>
+                                <button onClick={() => copiar(link)} className="text-[color:var(--travertino)] hover:text-[color:var(--bronze)] shrink-0" aria-label="Copiar link">
+                                  <Copy className="h-4 w-4" />
+                                </button>
+                              </>
+                            ) : (
+                              <span className="flex-1 text-xs text-[color:var(--muted-foreground)] italic">não será rastreado</span>
+                            )}
                           </div>
                         );
                       })}
@@ -443,14 +460,19 @@ function KitPublicacaoPage() {
                   </div>
 
                   <div>
-                    <button
-                      disabled={criarCampanhas.isPending || !slugCampanha(campanha)}
-                      onClick={() => criarCampanhas.mutate()}
-                      className="inline-flex items-center gap-2 rounded-[4px] bg-[color:var(--graphite)] px-5 py-2.5 text-sm text-white hover:bg-[color:var(--bronze)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      {criarCampanhas.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : campanhasCriadas ? <Check className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}
-                      {campanhasCriadas ? "Criado no Diagnóstico" : "Criar campanhas no Diagnóstico"}
-                    </button>
+                    {(() => {
+                      const nSel = CANAIS_UTM.filter((c) => (resultado[c.key] ?? "").trim() !== "" && canalSelecionado(c.key)).length;
+                      return (
+                        <button
+                          disabled={criarCampanhas.isPending || !slugCampanha(campanha) || nSel === 0}
+                          onClick={() => criarCampanhas.mutate()}
+                          className="inline-flex items-center gap-2 rounded-[4px] bg-[color:var(--graphite)] px-5 py-2.5 text-sm text-white hover:bg-[color:var(--bronze)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          {criarCampanhas.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : campanhasCriadas ? <Check className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}
+                          {campanhasCriadas ? "Criado no Diagnóstico" : `Criar ${nSel || ""} campanha(s) no Diagnóstico`}
+                        </button>
+                      );
+                    })()}
                     <p className="mt-2 text-xs text-[color:var(--muted-foreground)]">
                       As campanhas aparecem no painel do NL Diagnóstico (HUB). Cole cada link no canal correspondente ao publicar.
                     </p>
