@@ -39,12 +39,16 @@ function Calendario() {
   const excluirItemFn = useServerFn(excluirPlanoItem);
   const limparPlanejadosFn = useServerFn(limparPlanejados);
   const [periodo, setPeriodo] = useState<PlanoPeriodo>("mes");
+  const [abaPlano, setAbaPlano] = useState<"produzir" | "feitos">("produzir");
 
   // Plano salvo no banco — não se perde ao atualizar a página.
   const { data: planoItens } = useQuery({
     queryKey: ["plano-itens"],
     queryFn: async () => listarPlanoFn(),
   });
+  const planejados = useMemo(() => (planoItens ?? []).filter((i) => i.status === "planejado"), [planoItens]);
+  const feitos = useMemo(() => (planoItens ?? []).filter((i) => i.status === "produzido"), [planoItens]);
+  const itensAba = abaPlano === "produzir" ? planejados : feitos;
 
   const planoMut = useMutation({
     mutationFn: async () => {
@@ -82,7 +86,16 @@ function Calendario() {
     mutationFn: async (id: string) => atualizarItemFn({ data: { id, status: "produzido" } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["plano-itens"] });
-      toast.success("Item marcado como feito.");
+      toast.success("Marcado como feito. Veja na aba \"Feitos\".");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Falha ao atualizar."),
+  });
+
+  const reabrirItem = useMutation({
+    mutationFn: async (id: string) => atualizarItemFn({ data: { id, status: "planejado" } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["plano-itens"] });
+      toast.success("Voltou para \"A produzir\".");
     },
     onError: (e: any) => toast.error(e?.message ?? "Falha ao atualizar."),
   });
@@ -97,10 +110,10 @@ function Calendario() {
   });
 
   const limparTudo = useMutation({
-    mutationFn: async () => limparPlanejadosFn({ data: {} }),
+    mutationFn: async (de: "planejado" | "produzido") => limparPlanejadosFn({ data: { de } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["plano-itens"] });
-      toast.success("Plano limpo.");
+      toast.success("Lista limpa.");
     },
     onError: (e: any) => toast.error(e?.message ?? "Falha ao limpar."),
   });
@@ -224,97 +237,139 @@ function Calendario() {
       <div className="px-4 md:px-10 py-8">
         {planoItens && planoItens.length > 0 && (
           <div className="mb-8 border border-[color:var(--bronze)]/40 rounded-lg bg-[color:var(--bege)] p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)]">
-                A PRODUZIR · {planoItens.length} {planoItens.length === 1 ? "POST PLANEJADO" : "POSTS PLANEJADOS"}
+            <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+              <div className="inline-flex rounded-[4px] border border-[color:var(--divisoria)] bg-white p-0.5">
+                <button
+                  onClick={() => setAbaPlano("produzir")}
+                  className={`px-3 py-1.5 rounded-[3px] text-[11px] font-mono tracking-widest transition-colors ${abaPlano === "produzir" ? "bg-[color:var(--graphite)] text-white" : "text-[color:var(--graphite)] hover:text-[color:var(--bronze)]"}`}
+                >
+                  A PRODUZIR · {planejados.length}
+                </button>
+                <button
+                  onClick={() => setAbaPlano("feitos")}
+                  className={`px-3 py-1.5 rounded-[3px] text-[11px] font-mono tracking-widest transition-colors ${abaPlano === "feitos" ? "bg-[color:var(--graphite)] text-white" : "text-[color:var(--graphite)] hover:text-[color:var(--bronze)]"}`}
+                >
+                  FEITOS · {feitos.length}
+                </button>
               </div>
-              <button
-                onClick={() => {
-                  if (confirm("Limpar todos os posts planejados? Isso remove a lista 'A produzir'.")) limparTudo.mutate();
-                }}
-                disabled={limparTudo.isPending}
-                className="inline-flex items-center gap-1.5 text-xs text-[color:var(--muted-foreground)] hover:text-[color:var(--graphite)] disabled:opacity-40"
-              >
-                <Trash2 className="h-3.5 w-3.5" /> Limpar
-              </button>
+              {itensAba.length > 0 && (
+                <button
+                  onClick={() => {
+                    const alvo = abaPlano === "produzir" ? "planejado" : "produzido";
+                    const msg =
+                      abaPlano === "produzir"
+                        ? "Limpar todos os posts planejados?"
+                        : "Limpar todo o histórico de feitos?";
+                    if (confirm(msg)) limparTudo.mutate(alvo);
+                  }}
+                  disabled={limparTudo.isPending}
+                  className="inline-flex items-center gap-1.5 text-xs text-[color:var(--muted-foreground)] hover:text-[color:var(--graphite)] disabled:opacity-40"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Limpar
+                </button>
+              )}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Array.from(new Set(planoItens.map((i) => i.semana)))
-                .sort((a, b) => a - b)
-                .map((sem) => {
-                  const itens = planoItens.filter((i) => i.semana === sem);
-                  if (!itens.length) return null;
-                  return (
-                    <div key={sem} className="space-y-2">
-                      <div className="font-mono text-[10px] tracking-widest text-[color:var(--muted-foreground)]">
-                        SEMANA {sem}
-                      </div>
-                      {itens.map((it) => (
-                        <div
-                          key={it.id}
-                          className="border border-[color:var(--divisoria)] bg-white rounded-[4px] p-3"
-                        >
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className={`px-2 py-0.5 rounded-[4px] text-[10px] font-mono tracking-widest ${LINHA_BADGE[it.linha as "A" | "B" | "AB" | "C"] ?? ""}`}>
-                              L.{it.linha}
-                            </span>
-                            {it.pilar && (
-                              <span className="font-mono text-[9px] tracking-widest uppercase text-[color:var(--bronze)]">
-                                {it.pilar}
+            {itensAba.length === 0 ? (
+              <div className="text-sm text-[color:var(--muted-foreground)] py-6 text-center">
+                {abaPlano === "produzir"
+                  ? "Nada a produzir. Gere um plano com a IA ali em cima."
+                  : "Nenhum item marcado como feito ainda."}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Array.from(new Set(itensAba.map((i) => i.semana)))
+                  .sort((a, b) => a - b)
+                  .map((sem) => {
+                    const itens = itensAba.filter((i) => i.semana === sem);
+                    if (!itens.length) return null;
+                    return (
+                      <div key={sem} className="space-y-2">
+                        <div className="font-mono text-[10px] tracking-widest text-[color:var(--muted-foreground)]">
+                          SEMANA {sem}
+                        </div>
+                        {itens.map((it) => (
+                          <div
+                            key={it.id}
+                            className={`border border-[color:var(--divisoria)] rounded-[4px] p-3 ${abaPlano === "feitos" ? "bg-[color:var(--gelo)]" : "bg-white"}`}
+                          >
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`px-2 py-0.5 rounded-[4px] text-[10px] font-mono tracking-widest ${LINHA_BADGE[it.linha as "A" | "B" | "AB" | "C"] ?? ""}`}>
+                                L.{it.linha}
                               </span>
-                            )}
-                            <span className="font-mono text-[9px] tracking-widest uppercase text-[color:var(--muted-foreground)]">
-                              {FORMATOS.find((f) => f.value === it.formato)?.label ?? it.formato}
-                            </span>
-                            {it.origem === "projeto" && it.cliente && (
-                              <span className="px-2 py-0.5 rounded-[4px] text-[9px] font-mono tracking-widest uppercase bg-[color:var(--bronze)] text-white">
-                                Projeto · {it.cliente}
+                              {it.pilar && (
+                                <span className="font-mono text-[9px] tracking-widest uppercase text-[color:var(--bronze)]">
+                                  {it.pilar}
+                                </span>
+                              )}
+                              <span className="font-mono text-[9px] tracking-widest uppercase text-[color:var(--muted-foreground)]">
+                                {FORMATOS.find((f) => f.value === it.formato)?.label ?? it.formato}
                               </span>
+                              {it.origem === "projeto" && it.cliente && (
+                                <span className="px-2 py-0.5 rounded-[4px] text-[9px] font-mono tracking-widest uppercase bg-[color:var(--bronze)] text-white">
+                                  Projeto · {it.cliente}
+                                </span>
+                              )}
+                              {abaPlano === "feitos" && (
+                                <span className="ml-auto inline-flex items-center gap-1 text-[9px] font-mono tracking-widest uppercase text-emerald-700">
+                                  <Check className="h-3 w-3" /> Feito
+                                </span>
+                              )}
+                            </div>
+                            <div className="font-serif text-sm text-[color:var(--graphite)] mt-1">{it.tema}</div>
+                            {it.origem !== "projeto" && it.dor_titulo && (
+                              <div className="text-xs text-[color:var(--muted-foreground)] mt-0.5">Dor: {it.dor_titulo}</div>
                             )}
-                          </div>
-                          <div className="font-serif text-sm text-[color:var(--graphite)] mt-1">{it.tema}</div>
-                          {it.origem !== "projeto" && it.dor_titulo && (
-                            <div className="text-xs text-[color:var(--muted-foreground)] mt-0.5">Dor: {it.dor_titulo}</div>
-                          )}
-                          <div className="mt-2.5 flex items-center justify-between gap-2">
-                            <Link
-                              to="/copy"
-                              search={{
-                                dor: it.dor_id ?? undefined,
-                                linha: it.linha,
-                                formato: it.formato,
-                                observacao: `${it.tema ?? ""}${it.gancho ? " — " + it.gancho : ""}`,
-                                projeto: it.contexto_id ?? undefined,
-                              } as any}
-                              className="inline-flex items-center gap-1 text-xs text-[color:var(--bronze)] hover:underline"
-                            >
-                              Gerar copy <ArrowRight className="h-3 w-3" />
-                            </Link>
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => marcarFeito.mutate(it.id)}
-                                disabled={marcarFeito.isPending}
-                                title="Marcar como feito"
-                                className="inline-flex items-center gap-1 text-[11px] text-[color:var(--graphite)] border border-[color:var(--divisoria)] rounded-[4px] px-2 py-1 hover:border-[color:var(--bronze)] disabled:opacity-40"
+                            <div className="mt-2.5 flex items-center justify-between gap-2">
+                              <Link
+                                to="/copy"
+                                search={{
+                                  dor: it.dor_id ?? undefined,
+                                  linha: it.linha,
+                                  formato: it.formato,
+                                  observacao: `${it.tema ?? ""}${it.gancho ? " — " + it.gancho : ""}`,
+                                  projeto: it.contexto_id ?? undefined,
+                                } as any}
+                                className="inline-flex items-center gap-1 text-xs text-[color:var(--bronze)] hover:underline"
                               >
-                                <Check className="h-3 w-3" /> Feito
-                              </button>
-                              <button
-                                onClick={() => descartarItem.mutate(it.id)}
-                                disabled={descartarItem.isPending}
-                                title="Remover do plano"
-                                className="inline-flex items-center justify-center text-[color:var(--muted-foreground)] hover:text-red-600 rounded-[4px] p-1 disabled:opacity-40"
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </button>
+                                Gerar copy <ArrowRight className="h-3 w-3" />
+                              </Link>
+                              <div className="flex items-center gap-1">
+                                {abaPlano === "produzir" ? (
+                                  <button
+                                    onClick={() => marcarFeito.mutate(it.id)}
+                                    disabled={marcarFeito.isPending}
+                                    title="Marcar como feito"
+                                    className="inline-flex items-center gap-1 text-[11px] text-[color:var(--graphite)] border border-[color:var(--divisoria)] rounded-[4px] px-2 py-1 hover:border-[color:var(--bronze)] disabled:opacity-40"
+                                  >
+                                    <Check className="h-3 w-3" /> Feito
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => reabrirItem.mutate(it.id)}
+                                    disabled={reabrirItem.isPending}
+                                    title="Voltar para A produzir"
+                                    className="inline-flex items-center gap-1 text-[11px] text-[color:var(--graphite)] border border-[color:var(--divisoria)] rounded-[4px] px-2 py-1 hover:border-[color:var(--bronze)] disabled:opacity-40"
+                                  >
+                                    <ArrowRight className="h-3 w-3 rotate-180" /> Reabrir
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => descartarItem.mutate(it.id)}
+                                  disabled={descartarItem.isPending}
+                                  title="Remover do plano"
+                                  className="inline-flex items-center justify-center text-[color:var(--muted-foreground)] hover:text-red-600 rounded-[4px] p-1 disabled:opacity-40"
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })}
-            </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
           </div>
         )}
 

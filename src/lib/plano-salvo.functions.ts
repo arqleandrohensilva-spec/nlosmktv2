@@ -65,7 +65,8 @@ export const salvarPlano = createServerFn({ method: "POST" })
     return { ok: true, salvos: rows.length };
   });
 
-// Lista os itens ainda "a produzir" (planejados), do mais recente pro mais antigo.
+// Lista os itens salvos: "a produzir" (planejados) e "feitos" (produzidos),
+// do mais recente pro mais antigo. Os descartados ficam de fora.
 export const listarPlanoItens = createServerFn({ method: "GET" })
   .middleware([withExternalAuth])
   .handler(async ({ context }): Promise<PlanoItemSalvo[]> => {
@@ -73,7 +74,7 @@ export const listarPlanoItens = createServerFn({ method: "GET" })
     const { data, error } = await client
       .from("mkt_plano_itens")
       .select("*")
-      .eq("status", "planejado")
+      .in("status", ["planejado", "produzido"])
       .order("created_at", { ascending: false })
       .order("semana", { ascending: true });
     if (error) throw new Error(error.message);
@@ -112,15 +113,20 @@ export const excluirPlanoItem = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-const LimparInput = z.object({ lote: z.string().optional() });
+const LimparInput = z.object({
+  lote: z.string().optional(),
+  // Qual lista limpar: 'planejado' (a produzir) ou 'produzido' (feitos). Padrão: planejado.
+  de: z.enum(["planejado", "produzido"]).optional(),
+});
 
-// Limpa todos os planejados (ou só um lote). Usa status 'descartado' (não apaga histórico).
+// Limpa uma lista (planejados ou feitos). Usa status 'descartado' (não apaga histórico).
 export const limparPlanejados = createServerFn({ method: "POST" })
   .middleware([withExternalAuth])
   .inputValidator((input: unknown) => LimparInput.parse(input ?? {}))
   .handler(async ({ data, context }): Promise<{ ok: boolean }> => {
     const client = sb(context.accessToken);
-    let q = client.from("mkt_plano_itens").update({ status: "descartado" }).eq("status", "planejado");
+    const de = data.de ?? "planejado";
+    let q = client.from("mkt_plano_itens").update({ status: "descartado" }).eq("status", de);
     if (data.lote) q = q.eq("lote", data.lote);
     const { error } = await q;
     if (error) throw new Error(error.message);
