@@ -4,9 +4,16 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/lib/supabaseExternal";
 import { PageHeader } from "@/components/page-header";
 import { LINHAS, FORMATOS, STATUS, LINHA_BADGE } from "@/lib/nl-brand";
-import { gerarPlanoMensal, type PlanoItem, type PlanoPeriodo } from "@/lib/plano.functions";
+import { gerarPlanoMensal, type PlanoPeriodo } from "@/lib/plano.functions";
+import {
+  salvarPlano,
+  listarPlanoItens,
+  atualizarPlanoItem,
+  excluirPlanoItem,
+  limparPlanejados,
+} from "@/lib/plano-salvo.functions";
 import { useState, useMemo } from "react";
-import { Plus, X, AlertTriangle, Sparkles, Loader2, ArrowRight, Heart, MessageCircle, Send, Bookmark, ThumbsUp, Repeat2 } from "lucide-react";
+import { Plus, X, AlertTriangle, Sparkles, Loader2, ArrowRight, Check, Trash2, Heart, MessageCircle, Send, Bookmark, ThumbsUp, Repeat2 } from "lucide-react";
 import { signBibliotecaUrls } from "@/components/biblioteca-picker";
 import { toast } from "sonner";
 
@@ -26,18 +33,76 @@ function Calendario() {
   const [selected, setSelected] = useState<any | null>(null);
   const qc = useQueryClient();
   const gerarPlano = useServerFn(gerarPlanoMensal);
-  const [plano, setPlano] = useState<PlanoItem[] | null>(null);
+  const salvarPlanoFn = useServerFn(salvarPlano);
+  const listarPlanoFn = useServerFn(listarPlanoItens);
+  const atualizarItemFn = useServerFn(atualizarPlanoItem);
+  const excluirItemFn = useServerFn(excluirPlanoItem);
+  const limparPlanejadosFn = useServerFn(limparPlanejados);
   const [periodo, setPeriodo] = useState<PlanoPeriodo>("mes");
-  const [planoPeriodo, setPlanoPeriodo] = useState<PlanoPeriodo>("mes");
+
+  // Plano salvo no banco — não se perde ao atualizar a página.
+  const { data: planoItens } = useQuery({
+    queryKey: ["plano-itens"],
+    queryFn: async () => listarPlanoFn(),
+  });
 
   const planoMut = useMutation({
-    mutationFn: async () => gerarPlano({ data: { periodo } }),
-    onSuccess: (p) => {
-      setPlano(p);
-      setPlanoPeriodo(periodo);
-      toast.success(`Plano de ${PERIODO_LABEL[periodo]} gerado. Clique em cada item para gerar a copy.`);
+    mutationFn: async () => {
+      const itens = await gerarPlano({ data: { periodo } });
+      if (!itens.length) throw new Error("A IA não retornou itens. Tente de novo.");
+      await salvarPlanoFn({
+        data: {
+          periodo,
+          itens: itens.map((it) => ({
+            semana: it.semana,
+            linha: it.linha,
+            formato: it.formato,
+            pilar: it.pilar,
+            dor_id: it.dor_id,
+            dor_titulo: it.dor_titulo,
+            tema: it.tema,
+            gancho: it.gancho,
+            origem: it.origem,
+            projeto_id: it.projeto_id,
+            contexto_id: it.contexto_id,
+            cliente: it.cliente,
+          })),
+        },
+      });
+      return itens.length;
     },
-    onError: (e: any) => toast.error(e?.message ?? "Falha ao gerar o plano.")
+    onSuccess: (n) => {
+      qc.invalidateQueries({ queryKey: ["plano-itens"] });
+      toast.success(`Plano de ${PERIODO_LABEL[periodo]} gerado e salvo (${n} posts). Veja em "A produzir".`);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Falha ao gerar o plano."),
+  });
+
+  const marcarFeito = useMutation({
+    mutationFn: async (id: string) => atualizarItemFn({ data: { id, status: "produzido" } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["plano-itens"] });
+      toast.success("Item marcado como feito.");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Falha ao atualizar."),
+  });
+
+  const descartarItem = useMutation({
+    mutationFn: async (id: string) => excluirItemFn({ data: { id } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["plano-itens"] });
+      toast.success("Item removido do plano.");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Falha ao remover."),
+  });
+
+  const limparTudo = useMutation({
+    mutationFn: async () => limparPlanejadosFn({ data: {} }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["plano-itens"] });
+      toast.success("Plano limpo.");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Falha ao limpar."),
   });
 
   const { data: posts } = useQuery({
@@ -157,51 +222,47 @@ function Calendario() {
       />
 
       <div className="px-4 md:px-10 py-8">
-        {plano && plano.length > 0 && (
+        {planoItens && planoItens.length > 0 && (
           <div className="mb-8 border border-[color:var(--bronze)]/40 rounded-lg bg-[color:var(--bege)] p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="font-mono text-[10px] tracking-widest text-[color:var(--bronze)]">
-                PLANO DE {PERIODO_LABEL[planoPeriodo].toUpperCase()} (IA) · {plano.length} POSTS
+                A PRODUZIR · {planoItens.length} {planoItens.length === 1 ? "POST PLANEJADO" : "POSTS PLANEJADOS"}
               </div>
               <button
-                onClick={() => setPlano(null)}
-                className="text-[color:var(--muted-foreground)] hover:text-[color:var(--graphite)]"
-                aria-label="Fechar plano"
+                onClick={() => {
+                  if (confirm("Limpar todos os posts planejados? Isso remove a lista 'A produzir'.")) limparTudo.mutate();
+                }}
+                disabled={limparTudo.isPending}
+                className="inline-flex items-center gap-1.5 text-xs text-[color:var(--muted-foreground)] hover:text-[color:var(--graphite)] disabled:opacity-40"
               >
-                <X className="h-4 w-4" />
+                <Trash2 className="h-3.5 w-3.5" /> Limpar
               </button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Array.from(new Set(plano.map((i) => i.semana)))
+              {Array.from(new Set(planoItens.map((i) => i.semana)))
                 .sort((a, b) => a - b)
                 .map((sem) => {
-                  const itens = plano.filter((i) => i.semana === sem);
+                  const itens = planoItens.filter((i) => i.semana === sem);
                   if (!itens.length) return null;
                   return (
                     <div key={sem} className="space-y-2">
                       <div className="font-mono text-[10px] tracking-widest text-[color:var(--muted-foreground)]">
                         SEMANA {sem}
                       </div>
-                      {itens.map((it, idx) => (
-                        <Link
-                          key={idx}
-                          to="/copy"
-                          search={{
-                            dor: it.dor_id ?? undefined,
-                            linha: it.linha,
-                            formato: it.formato,
-                            observacao: `${it.tema}${it.gancho ? " — " + it.gancho : ""}`,
-                            projeto: it.contexto_id ?? undefined,
-                          } as any}
-                          className="block border border-[color:var(--divisoria)] bg-white rounded-[4px] p-3 hover:border-[color:var(--bronze)] transition-colors"
+                      {itens.map((it) => (
+                        <div
+                          key={it.id}
+                          className="border border-[color:var(--divisoria)] bg-white rounded-[4px] p-3"
                         >
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className={`px-2 py-0.5 rounded-[4px] text-[10px] font-mono tracking-widest ${LINHA_BADGE[it.linha]}`}>
+                            <span className={`px-2 py-0.5 rounded-[4px] text-[10px] font-mono tracking-widest ${LINHA_BADGE[it.linha as "A" | "B" | "AB" | "C"] ?? ""}`}>
                               L.{it.linha}
                             </span>
-                            <span className="font-mono text-[9px] tracking-widest uppercase text-[color:var(--bronze)]">
-                              {it.pilar}
-                            </span>
+                            {it.pilar && (
+                              <span className="font-mono text-[9px] tracking-widest uppercase text-[color:var(--bronze)]">
+                                {it.pilar}
+                              </span>
+                            )}
                             <span className="font-mono text-[9px] tracking-widest uppercase text-[color:var(--muted-foreground)]">
                               {FORMATOS.find((f) => f.value === it.formato)?.label ?? it.formato}
                             </span>
@@ -215,10 +276,40 @@ function Calendario() {
                           {it.origem !== "projeto" && it.dor_titulo && (
                             <div className="text-xs text-[color:var(--muted-foreground)] mt-0.5">Dor: {it.dor_titulo}</div>
                           )}
-                          <div className="mt-2 inline-flex items-center gap-1 text-xs text-[color:var(--bronze)]">
-                            Gerar copy <ArrowRight className="h-3 w-3" />
+                          <div className="mt-2.5 flex items-center justify-between gap-2">
+                            <Link
+                              to="/copy"
+                              search={{
+                                dor: it.dor_id ?? undefined,
+                                linha: it.linha,
+                                formato: it.formato,
+                                observacao: `${it.tema ?? ""}${it.gancho ? " — " + it.gancho : ""}`,
+                                projeto: it.contexto_id ?? undefined,
+                              } as any}
+                              className="inline-flex items-center gap-1 text-xs text-[color:var(--bronze)] hover:underline"
+                            >
+                              Gerar copy <ArrowRight className="h-3 w-3" />
+                            </Link>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => marcarFeito.mutate(it.id)}
+                                disabled={marcarFeito.isPending}
+                                title="Marcar como feito"
+                                className="inline-flex items-center gap-1 text-[11px] text-[color:var(--graphite)] border border-[color:var(--divisoria)] rounded-[4px] px-2 py-1 hover:border-[color:var(--bronze)] disabled:opacity-40"
+                              >
+                                <Check className="h-3 w-3" /> Feito
+                              </button>
+                              <button
+                                onClick={() => descartarItem.mutate(it.id)}
+                                disabled={descartarItem.isPending}
+                                title="Remover do plano"
+                                className="inline-flex items-center justify-center text-[color:var(--muted-foreground)] hover:text-red-600 rounded-[4px] p-1 disabled:opacity-40"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
                           </div>
-                        </Link>
+                        </div>
                       ))}
                     </div>
                   );
