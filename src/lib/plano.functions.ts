@@ -162,6 +162,7 @@ export const gerarPlanoMensal = createServerFn({ method: "POST" })
             c.etapa_atual ? `Etapa: ${c.etapa_atual}` : "",
             c.status ? `Status: ${c.status}` : "",
             c.proxima_entrega ? `Próxima entrega: ${c.proxima_entrega}` : "",
+            c.descricao ? `Sobre o projeto: ${c.descricao}` : "",
             brief ? `Briefing: ${brief}` : "",
           ].filter(Boolean);
           return "- " + partes.join(" · ");

@@ -802,7 +802,9 @@ function contextoProjetoTexto(c: any): string {
     c.status ? `Status: ${c.status}` : "",
     c.proxima_entrega ? `Próxima entrega: ${c.proxima_entrega}` : "",
   ].filter(Boolean);
-  return `Projeto do NL OS — ${partes.join(" · ")}.`;
+  const base = `Projeto do NL OS — ${partes.join(" · ")}.`;
+  // Descrição do projeto escrita no NL OS (campo "Sobre o projeto — para o Marketing").
+  return c.descricao ? `${base}\nSobre o projeto: ${c.descricao}` : base;
 }
 
 function tipoParaLinha(tipo?: string): "A" | "B" | "AB" | "C" | null {
